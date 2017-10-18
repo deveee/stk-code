@@ -74,7 +74,7 @@ RTT::RTT(unsigned int width, unsigned int height, float rtt_scale)
     const dimension2du shadowsize2(shadowside / 4, shadowside / 4);
     const dimension2du shadowsize3(shadowside / 8, shadowside / 8);
 
-    unsigned linear_depth_mip_levels = int(ceilf(log2f( float(max_(res.Width, res.Height)) )));
+    unsigned linear_depth_mip_levels = 0;//int(ceilf(log2f( float(max_(res.Width, res.Height)) )));
 
     DepthStencilTexture = generateRTT(res, GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8);
 

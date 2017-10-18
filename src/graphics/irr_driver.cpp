@@ -287,6 +287,8 @@ void IrrDriver::createListOfVideoModes()
  */
 void IrrDriver::initDevice()
 {
+    UserConfigParams::m_force_legacy_device = true;
+
     SIrrlichtCreationParameters params;
 
     // If --no-graphics option was used, the null device can still be used.

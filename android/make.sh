@@ -21,14 +21,14 @@ export NDK_CPPFLAGS="-O3 -g"
 export NDK_ABI_ARMV7=armeabi-v7a
 export ARCH_ARMV7=arm
 export HOST_ARMV7=arm-linux-androideabi
-export NDK_PLATFORM_ARMV7=android-19
-export SDK_VERSION_ARMV7=19
+export NDK_PLATFORM_ARMV7=android-14
+export SDK_VERSION_ARMV7=14
 
 export NDK_ABI_X86=x86
 export ARCH_X86=x86
 export HOST_X86=i686-linux-android
-export NDK_PLATFORM_X86=android-19
-export SDK_VERSION_X86=19
+export NDK_PLATFORM_X86=android-14
+export SDK_VERSION_X86=14
 
 export NDK_ABI_AARCH64=arm64-v8a
 export ARCH_AARCH64=arm64
