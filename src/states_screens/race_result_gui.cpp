@@ -217,7 +217,7 @@ void RaceResultGUI::enableAllButtons()
 
         middle->setText(_("Restart"));
         middle->setVisible(true);
-
+        middle->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
         if (race_manager->raceWasStartedFromOverworld())
         {
             top->setVisible(false);
@@ -230,8 +230,6 @@ void RaceResultGUI::enableAllButtons()
             bottom->setText(_("Back to the menu"));
         }
         bottom->setVisible(true);
-
-        bottom->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
     }
 }   // enableAllButtons
 
@@ -330,7 +328,7 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
             }
             return;
         }
-        Log::fatal("RaceResultGUI", "Incorrect event '%s' when things are unlocked.",
+        Log::warn("RaceResultGUI", "Incorrect event '%s' when things are unlocked.",
             name.c_str());
     }
 
@@ -408,7 +406,7 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
         }
     }
     else
-        Log::fatal("RaceResultGUI", "Incorrect event '%s' for normal race.",
+        Log::warn("RaceResultGUI", "Incorrect event '%s' for normal race.",
             name.c_str());
     return;
 }   // eventCallback

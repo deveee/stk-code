@@ -527,7 +527,7 @@ bool CentralVideoSettings::isDefferedEnabled() const
 
 bool CentralVideoSettings::supportsHardwareSkinning() const
 {
-    return isARBUniformBufferObjectUsable();
+    return !GraphicsRestrictions::isDisabled(GraphicsRestrictions::GR_HARDWARE_SKINNING);
 }
 
 bool CentralVideoSettings::isARBTextureSwizzleUsable() const
