@@ -1404,7 +1404,8 @@ void Kart::update(float dt)
                    
         if (m_controller->isLocalPlayerController() && 
             !has_animation_before && 
-            !World::getWorld()->isStartPhase() && (getSpeed() < 3.0f ||
+            World::getWorld()->getPhase() == World::RACE_PHASE && 
+            (getSpeed() < 3.0f ||
             !lw->getTrackSector(getWorldKartId())->isOnRoad()))
         {
             m_rescue_counter += dt;
@@ -1435,7 +1436,8 @@ void Kart::update(float dt)
                    
         if (m_controller->isLocalPlayerController() && 
             !has_animation_before && 
-            !World::getWorld()->isStartPhase() && getSpeed() < 3.0f)
+            World::getWorld()->getPhase() == World::RACE_PHASE &&  
+            getSpeed() < 3.0f)
         {
             m_rescue_counter += dt;
             
