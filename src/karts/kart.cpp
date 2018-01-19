@@ -141,6 +141,7 @@ Kart::Kart (const std::string& ident, unsigned int world_kart_id,
     m_min_nitro_time       = 0.0f;
     m_fire_clicked         = 0;
     m_wrongway_counter     = 0;
+    m_rescue_counter       = 0.0f;
     m_type                 = RaceManager::KT_AI;
 
     m_view_blocked_by_plunger = 0;
@@ -371,6 +372,7 @@ void Kart::reset()
     m_bubblegum_torque     = 0.0f;
     m_has_caught_nolok_bubblegum = false;
     m_is_jumping           = false;
+    m_rescue_counter       = 0.0f;
 
     // In case that the kart was in the air, in which case its
     // linear damping is 0
@@ -1393,8 +1395,29 @@ void Kart::update(float dt)
         const btQuaternion& q = getTrans().getRotation();
         const float roll = quad_normal.angle
                ((Vec3(0, 1, 0).rotate(q.getAxis(), q.getAngle())));
-
-        if (Track::getCurrentTrack()->isAutoRescueEnabled() &&
+              
+        if (lw->getTrackSector(getWorldKartId())->isOnRoad() &&
+            getSpeed() >= 3.0f)
+        {
+            m_rescue_counter = 0.0f;
+        }
+                   
+        if (m_controller->isLocalPlayerController() && 
+            Track::getCurrentTrack()->isAutoRescueEnabled() &&
+            !has_animation_before && 
+            !World::getWorld()->isStartPhase() && (getSpeed() < 3.0f ||
+            !lw->getTrackSector(getWorldKartId())->isOnRoad()))
+        {
+            m_rescue_counter += dt;
+            
+            if (m_rescue_counter > 3.0f)
+            {
+                new RescueAnimation(this, /*is_auto_rescue*/true);
+                m_last_factor_engine_sound = 0.0f;
+                m_rescue_counter = 0.0f;
+            }
+        }
+        else if (Track::getCurrentTrack()->isAutoRescueEnabled() &&
             (!m_terrain_info->getMaterial() ||
             !m_terrain_info->getMaterial()->hasGravity()) &&
             !has_animation_before && fabs(roll) > 60 * DEGREE_TO_RAD &&

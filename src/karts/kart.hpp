@@ -160,6 +160,8 @@ protected:
 
     /** Counter which is used for displaying wrong way message after a delay */
     float        m_wrongway_counter;
+    
+    float        m_rescue_counter;
 
 
     // Bullet physics parameters
