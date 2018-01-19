@@ -1426,6 +1426,27 @@ void Kart::update(float dt)
             m_last_factor_engine_sound = 0.0f;
         }
     }
+    else
+    {
+        if (getSpeed() >= 3.0f)
+        {
+            m_rescue_counter = 0.0f;
+        }
+                   
+        if (m_controller->isLocalPlayerController() && 
+            !has_animation_before && 
+            !World::getWorld()->isStartPhase() && getSpeed() < 3.0f)
+        {
+            m_rescue_counter += dt;
+            
+            if (m_rescue_counter > 3.0f)
+            {
+                new RescueAnimation(this, /*is_auto_rescue*/true);
+                m_last_factor_engine_sound = 0.0f;
+                m_rescue_counter = 0.0f;
+            }
+        }
+    }
 
     // Make sure that the ray doesn't hit the kart. This is done by
     // resetting the collision filter group, so that this collision
