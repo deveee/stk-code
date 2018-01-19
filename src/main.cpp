@@ -1662,40 +1662,6 @@ int main(int argc, char *argv[] )
                 }
                 Log::warn("main", "Screen size is too small!");
             }
-
-            if (GraphicsRestrictions::isDisabled(
-                GraphicsRestrictions::GR_DRIVER_RECENT_ENOUGH))
-            {
-                if (UserConfigParams::m_old_driver_popup)
-                {
-                    MessageDialog *dialog =
-                        new MessageDialog(_("Your driver version is too old. "
-                                            "Please install the latest video "
-                                            "drivers."), /*from queue*/ true);
-                    GUIEngine::DialogQueue::get()->pushDialog(dialog);
-                }
-                Log::warn("OpenGL", "Driver is too old!");
-            }
-            else if (!CVS->isGLSL())
-            {
-                if (UserConfigParams::m_old_driver_popup)
-                {
-                    #ifdef USE_GLES2
-                    irr::core::stringw version = "OpenGL ES 3.0";
-                    #else
-                    irr::core::stringw version = "OpenGL 3.1";
-                    #endif
-                    MessageDialog *dialog =
-                        new MessageDialog(_("Your OpenGL version appears to be "
-                                            "too old. Please verify if an "
-                                            "update for your video driver is "
-                                            "available. SuperTuxKart requires "
-                                            "%s or better.", version), 
-                                            /*from queue*/ true);
-                    GUIEngine::DialogQueue::get()->pushDialog(dialog);
-                }
-                Log::warn("OpenGL", "OpenGL version is too old!");
-            }
         }
 #endif
         // Note that on the very first run of STK internet status is set to
