@@ -264,6 +264,9 @@ void PlayerController::update(float dt)
     if (!history->replayHistory())
         steer(dt, m_steer_val);
 
+    m_controls->setBrake(false);
+    m_controls->setAccel(1.0f);
+
     if (World::getWorld()->getPhase() == World::GOAL_PHASE)
     {
         m_controls->setBrake(false);
@@ -282,8 +285,8 @@ void PlayerController::update(float dt)
             if (m_penalty_time == 0.0 &&
                 World::getWorld()->getPhase() == WorldStatus::SET_PHASE)
             {
-                displayPenaltyWarning();
-                m_penalty_time = stk_config->m_penalty_time;
+                //displayPenaltyWarning();
+                //m_penalty_time = stk_config->m_penalty_time;
             }   // if penalty_time = 0
 
             m_controls->setBrake(false);
