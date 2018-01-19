@@ -94,19 +94,19 @@ void RaceSetupScreen::init()
     name2 += _("Contains no powerups, so only your driving skills matter!");
     w2->addItem( name2, IDENT_TTRIAL, RaceManager::getIconOf(RaceManager::MINOR_MODE_TIME_TRIAL));
 
-    if (PlayerManager::getCurrentPlayer()->isLocked(IDENT_FTL))
-    {
-        w2->addItem( _("Locked : solve active challenges to gain access to more!"),
-            "locked", RaceManager::getIconOf(RaceManager::MINOR_MODE_FOLLOW_LEADER), true);
-    }
-    else
-    {
-        irr::core::stringw name3 = irr::core::stringw(
-            RaceManager::getNameOf(RaceManager::MINOR_MODE_FOLLOW_LEADER)) + L"\n";
-        //I18N: short definition for follow-the-leader game mode
-        name3 += _("Keep up with the leader kart but don't overtake it!");
-        w2->addItem(name3, IDENT_FTL, RaceManager::getIconOf(RaceManager::MINOR_MODE_FOLLOW_LEADER), false);
-    }
+    //~ if (PlayerManager::getCurrentPlayer()->isLocked(IDENT_FTL))
+    //~ {
+        //~ w2->addItem( _("Locked : solve active challenges to gain access to more!"),
+            //~ "locked", RaceManager::getIconOf(RaceManager::MINOR_MODE_FOLLOW_LEADER), true);
+    //~ }
+    //~ else
+    //~ {
+        //~ irr::core::stringw name3 = irr::core::stringw(
+            //~ RaceManager::getNameOf(RaceManager::MINOR_MODE_FOLLOW_LEADER)) + L"\n";
+        //~ //I18N: short definition for follow-the-leader game mode
+        //~ name3 += _("Keep up with the leader kart but don't overtake it!");
+        //~ w2->addItem(name3, IDENT_FTL, RaceManager::getIconOf(RaceManager::MINOR_MODE_FOLLOW_LEADER), false);
+    //~ }
 
     irr::core::stringw name4 = irr::core::stringw(
         RaceManager::getNameOf(RaceManager::MINOR_MODE_3_STRIKES)) + L"\n";
@@ -119,23 +119,23 @@ void RaceSetupScreen::init()
     name5 += _("Push the ball into the opposite cage to score goals.");
     w2->addItem( name5, IDENT_SOCCER, RaceManager::getIconOf(RaceManager::MINOR_MODE_SOCCER));
 
-#define ENABLE_EASTER_EGG_MODE
-#ifdef ENABLE_EASTER_EGG_MODE
-    if(race_manager->getNumLocalPlayers() == 1)
-    {
-        irr::core::stringw name1 = irr::core::stringw(
-            RaceManager::getNameOf(RaceManager::MINOR_MODE_EASTER_EGG)) + L"\n";
-        //FIXME: avoid duplicating descriptions from the help menu!
-        name1 +=  _("Explore tracks to find all hidden eggs");
+//~ #define ENABLE_EASTER_EGG_MODE
+//~ #ifdef ENABLE_EASTER_EGG_MODE
+    //~ if(race_manager->getNumLocalPlayers() == 1)
+    //~ {
+        //~ irr::core::stringw name1 = irr::core::stringw(
+            //~ RaceManager::getNameOf(RaceManager::MINOR_MODE_EASTER_EGG)) + L"\n";
+        //~ //FIXME: avoid duplicating descriptions from the help menu!
+        //~ name1 +=  _("Explore tracks to find all hidden eggs");
 
-        w2->addItem( name1, IDENT_EASTER,
-            RaceManager::getIconOf(RaceManager::MINOR_MODE_EASTER_EGG));
-    }
-#endif
+        //~ w2->addItem( name1, IDENT_EASTER,
+            //~ RaceManager::getIconOf(RaceManager::MINOR_MODE_EASTER_EGG));
+    //~ }
+//~ #endif
 
-    irr::core::stringw name6 = irr::core::stringw( _("Ghost replay race")) + L"\n";
-    name6 += _("Race against ghost karts and try to beat them!");
-    w2->addItem( name6, IDENT_GHOST, "/gui/mode_ghost.png");
+    //~ irr::core::stringw name6 = irr::core::stringw( _("Ghost replay race")) + L"\n";
+    //~ name6 += _("Race against ghost karts and try to beat them!");
+    //~ w2->addItem( name6, IDENT_GHOST, "/gui/mode_ghost.png");
 
     w2->updateItemDisplay();
 
