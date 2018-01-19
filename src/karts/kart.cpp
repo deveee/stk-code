@@ -1403,7 +1403,6 @@ void Kart::update(float dt)
         }
                    
         if (m_controller->isLocalPlayerController() && 
-            Track::getCurrentTrack()->isAutoRescueEnabled() &&
             !has_animation_before && 
             !World::getWorld()->isStartPhase() && (getSpeed() < 3.0f ||
             !lw->getTrackSector(getWorldKartId())->isOnRoad()))
