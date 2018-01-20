@@ -266,6 +266,7 @@ void PlayerController::update(float dt)
 
     m_controls->setBrake(false);
     m_controls->setAccel(1.0f);
+    m_controls->setNitro(true);
 
     if (World::getWorld()->getPhase() == World::GOAL_PHASE)
     {
