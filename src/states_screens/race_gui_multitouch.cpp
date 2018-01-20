@@ -121,9 +121,9 @@ void RaceGUIMultitouch::initMultitouchSteering()
     const float margin_top = 0.3f * h;
     const float col_size = (btn_size + margin);
 
-    const float small_ratio = 1.0f;
+    const float small_ratio = 0.9f;
     const float btn_small_size = small_ratio * btn_size;
-    const float margin_small = small_ratio * margin;
+    const float margin_small = 0.6 * margin;
     const float col_small_size = small_ratio * col_size;
     
     const float big_ratio = 1.75f;
@@ -149,10 +149,10 @@ void RaceGUIMultitouch::initMultitouchSteering()
                         //~ int(steering_btn_x), int(steering_btn_y),
                         //~ int(btn2_size), int(btn2_size));
     m_device->addButton(BUTTON_LEFT,
-                        int(margin_big), int(h - margin_big - btn_big_size),
+                        int(margin_big), int(h * 0.5),
                         int(btn_big_size), int(btn_big_size));
     m_device->addButton(BUTTON_RIGHT,
-                        int(w - margin_big - btn_big_size), int(h - margin_big - btn_big_size),
+                        int(w - margin_big - btn_big_size), int(h * 0.5),
                         int(btn_big_size), int(btn_big_size));
     m_device->addButton(BUTTON_FIRE,
                         int((w - btn_big_size) / 2),  int(h - margin_big - btn_big_size),
