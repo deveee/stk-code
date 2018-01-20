@@ -15,11 +15,11 @@
 
         <box proportion="2" width="100%" layout="vertical-row" padding="2">
             <ribbon_grid id="karts" proportion="1" square_items="true" width="100%" align="center"
-                         child_width="90" child_height="90" max_rows="3"/>
+                         child_width="90" child_height="90" max_rows="1"/>
         </box>
 
         <!-- Groups will be added dynamically at runtime -->
-        <tabs width="98%" x="1%" height="25" id="kartgroups">
+        <tabs width="98%" x="1%" height="5" id="kartgroups">
         </tabs>
         <spacer width="100%" height="2%"/>
     </div>

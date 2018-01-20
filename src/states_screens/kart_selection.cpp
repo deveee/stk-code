@@ -311,7 +311,7 @@ void KartSelectionScreen::init()
 
     RibbonWidget* tabs = getWidget<RibbonWidget>("kartgroups");
     assert( tabs != NULL );
-    tabs->select(UserConfigParams::m_last_used_kart_group,
+    tabs->select("standard",
                  PLAYER_ID_GAME_MASTER);
 
     Widget* placeholder = getWidget("playerskarts");
@@ -335,6 +335,7 @@ void KartSelectionScreen::init()
     m_game_master_confirmed = false;
 
     tabs->setActive(true);
+    tabs->setVisible(false);
 
     m_kart_widgets.clearAndDeleteAll();
     StateManager::get()->resetActivePlayers();
