@@ -39,6 +39,8 @@ private:
     unsigned int m_minimap_bottom;
     
     video::ITexture* m_directionnal_wheel_tex;
+    video::ITexture* m_left_tex;
+    video::ITexture* m_right_tex;
     video::ITexture* m_pause_tex;
     video::ITexture* m_nitro_tex;
     video::ITexture* m_nitro_empty_tex;

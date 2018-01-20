@@ -43,6 +43,8 @@ RaceGUIMultitouch::RaceGUIMultitouch(RaceGUIBase* race_gui)
     m_minimap_bottom = 0;
     m_gui_action = false;
     m_directionnal_wheel_tex = NULL;
+    m_left_tex = NULL;
+    m_right_tex = NULL;
     m_pause_tex = NULL;
     m_nitro_tex = NULL;
     m_nitro_empty_tex = NULL;
@@ -119,10 +121,14 @@ void RaceGUIMultitouch::initMultitouchSteering()
     const float margin_top = 0.3f * h;
     const float col_size = (btn_size + margin);
 
-    const float small_ratio = 0.75f;
+    const float small_ratio = 1.0f;
     const float btn_small_size = small_ratio * btn_size;
     const float margin_small = small_ratio * margin;
     const float col_small_size = small_ratio * col_size;
+    
+    const float big_ratio = 1.75f;
+    const float btn_big_size = big_ratio * btn_size;
+    const float margin_big = margin * 0.5;
 
     float first_column_x = w - 2 * col_size;
     float second_column_x = w - 1 * col_size;
@@ -139,30 +145,41 @@ void RaceGUIMultitouch::initMultitouchSteering()
 
     m_minimap_bottom = (unsigned int)(h - 2 * col_size);
 
-    m_device->addButton(BUTTON_STEERING,
-                        int(steering_btn_x), int(steering_btn_y),
-                        int(btn2_size), int(btn2_size));
+    //~ m_device->addButton(BUTTON_STEERING,
+                        //~ int(steering_btn_x), int(steering_btn_y),
+                        //~ int(btn2_size), int(btn2_size));
+    m_device->addButton(BUTTON_LEFT,
+                        int(margin_big), int(h - margin_big - btn_big_size),
+                        int(btn_big_size), int(btn_big_size));
+    m_device->addButton(BUTTON_RIGHT,
+                        int(w - margin_big - btn_big_size), int(h - margin_big - btn_big_size),
+                        int(btn_big_size), int(btn_big_size));
+    m_device->addButton(BUTTON_FIRE,
+                        int((w - btn_big_size) / 2),  int(h - margin_big - btn_big_size),
+                        int(btn_big_size), int(btn_big_size));
     m_device->addButton(BUTTON_ESCAPE,
                         int(margin_top), int(margin_small),
                         int(btn_small_size), int(btn_small_size));
     m_device->addButton(BUTTON_RESCUE,
                         int(margin_top + col_small_size), int(margin_small),
                         int(btn_small_size), int(btn_small_size));
-    m_device->addButton(BUTTON_NITRO,
-                        int(second_column_x), int(h - 2 * col_size),
-                        int(btn_size), int(btn_size));
-    m_device->addButton(BUTTON_SKIDDING,
-                        int(second_column_x), int(h - 1 * col_size),
-                        int(btn_size), int(btn_size));
-    m_device->addButton(BUTTON_FIRE,
-                        int(first_column_x),  int(h - 2 * col_size),
-                        int(btn_size), int(btn_size));
-    m_device->addButton(BUTTON_LOOK_BACKWARDS,
-                        int(first_column_x), int(h - 1 * col_size),
-                        int(btn_size), int(btn_size));
+    //~ m_device->addButton(BUTTON_NITRO,
+                        //~ int(second_column_x), int(h - 2 * col_size),
+                        //~ int(btn_size), int(btn_size));
+    //~ m_device->addButton(BUTTON_SKIDDING,
+                        //~ int(second_column_x), int(h - 1 * col_size),
+                        //~ int(btn_size), int(btn_size));
+    //~ m_device->addButton(BUTTON_FIRE,
+                        //~ int(first_column_x),  int(h - 2 * col_size),
+                        //~ int(btn_size), int(btn_size));
+    //~ m_device->addButton(BUTTON_LOOK_BACKWARDS,
+                        //~ int(first_column_x), int(h - 1 * col_size),
+                        //~ int(btn_size), int(btn_size));
                       
     m_directionnal_wheel_tex = irr_driver->getTexture(FileManager::GUI, 
                                               "android/directionnal_wheel.png");
+    m_left_tex = irr_driver->getTexture(FileManager::GUI, "android/left.png");
+    m_right_tex = irr_driver->getTexture(FileManager::GUI, "android/right.png");
     m_pause_tex = irr_driver->getTexture(FileManager::GUI, "android/pause.png");
     m_nitro_tex = irr_driver->getTexture(FileManager::GUI, "android/nitro.png");
     m_nitro_empty_tex = irr_driver->getTexture(FileManager::GUI, 
@@ -233,6 +250,12 @@ void RaceGUIMultitouch::drawMultitouchSteering(const AbstractKart* kart,
 
             switch (button->type)
             {
+            case MultitouchButtonType::BUTTON_LEFT:
+                btn_texture = m_left_tex;
+                break;
+            case MultitouchButtonType::BUTTON_RIGHT:
+                btn_texture = m_right_tex;
+                break;
             case MultitouchButtonType::BUTTON_ESCAPE:
                 btn_texture = m_pause_tex;
                 break;
