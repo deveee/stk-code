@@ -18,6 +18,7 @@
 #include "states_screens/options_screen_ui.hpp"
 
 #include "addons/news_manager.hpp"
+#include "audio/music_manager.hpp"
 #include "audio/sfx_manager.hpp"
 #include "audio/sfx_base.hpp"
 #include "config/hardware_stats.hpp"
@@ -69,45 +70,6 @@ void OptionsScreenUI::loadedFromFile()
 {
     m_inited = false;
 
-    GUIEngine::SpinnerWidget* skinSelector = getWidget<GUIEngine::SpinnerWidget>("skinchoice");
-    assert( skinSelector != NULL );
-
-    skinSelector->m_properties[PROP_WRAP_AROUND] = "true";
-
-    m_skins.clear();
-    skinSelector->clearLabels();
-
-    std::set<std::string> skinFiles;
-    file_manager->listFiles(skinFiles /* out */, file_manager->getAsset(FileManager::SKIN,""),
-                            true /* make full path */ );
-
-    for (std::set<std::string>::iterator it = skinFiles.begin(); it != skinFiles.end(); it++)
-    {
-        if(StringUtils::getExtension(*it)=="stkskin")
-        {
-            m_skins.push_back( *it );
-        }
-    }
-
-    if (m_skins.size() == 0)
-    {
-        Log::warn("OptionsScreenUI", "Could not find a single skin, make sure that "
-                                     "the data files are correctly installed");
-        skinSelector->setActive(false);
-        return;
-    }
-
-    const int skin_count = (int)m_skins.size();
-    for (int n=0; n<skin_count; n++)
-    {
-        const std::string skinFileName = StringUtils::getBasename(m_skins[n]);
-        const std::string skinName = StringUtils::removeExtension( skinFileName );
-        skinSelector->addLabel( core::stringw(skinName.c_str()) );
-    }
-    skinSelector->m_properties[GUIEngine::PROP_MIN_VALUE] = "0";
-    skinSelector->m_properties[GUIEngine::PROP_MAX_VALUE] = StringUtils::toString(skin_count-1);
-
-
 }   // loadedFromFile
 
 // -----------------------------------------------------------------------------
@@ -115,75 +77,21 @@ void OptionsScreenUI::loadedFromFile()
 void OptionsScreenUI::init()
 {
     Screen::init();
-    RibbonWidget* ribbon = getWidget<RibbonWidget>("options_choice");
-    assert(ribbon != NULL);
-    ribbon->select( "tab_ui", PLAYER_ID_GAME_MASTER );
+    
+    // ---- music volume
+    CheckBoxWidget* sfx = this->getWidget<CheckBoxWidget>("sound_effects");
 
-    ribbon->getRibbonChildren()[0].setTooltip( _("Graphics") );
-    ribbon->getRibbonChildren()[1].setTooltip( _("Audio") );
-    ribbon->getRibbonChildren()[3].setTooltip( _("Players") );
-    ribbon->getRibbonChildren()[4].setTooltip( _("Controls") );
+    CheckBoxWidget* music = this->getWidget<CheckBoxWidget>("music");
 
-    GUIEngine::SpinnerWidget* skinSelector = getWidget<GUIEngine::SpinnerWidget>("skinchoice");
-    assert( skinSelector != NULL );
+    // ---- audio enables/disables
+    sfx->setState( UserConfigParams::m_sfx );
+    music->setState( UserConfigParams::m_music );
+    
 
-    // ---- video modes
-
-    CheckBoxWidget* fps = getWidget<CheckBoxWidget>("showfps");
-    assert( fps != NULL );
-    fps->setState( UserConfigParams::m_display_fps );
-    CheckBoxWidget* news = getWidget<CheckBoxWidget>("enable-internet");
-    assert( news != NULL );
-    news->setState( UserConfigParams::m_internet_status
-                                     ==RequestManager::IPERM_ALLOWED );
-    CheckBoxWidget* stats = getWidget<CheckBoxWidget>("enable-hw-report");
-    assert( stats != NULL );
-    LabelWidget *stats_label = getWidget<LabelWidget>("label-hw-report");
-    assert( stats_label );
-            stats->setState(UserConfigParams::m_hw_report_enable);
-
-    if(news->getState())
-    {
-        stats_label->setVisible(true);
-        stats->setVisible(true);
-        stats->setState(UserConfigParams::m_hw_report_enable);
-    }
-    else
-    {
-        stats_label->setVisible(false);
-        stats->setVisible(false);
-    }
-    CheckBoxWidget* difficulty = getWidget<CheckBoxWidget>("perPlayerDifficulty");
-    assert( difficulty != NULL );
-    difficulty->setState( UserConfigParams::m_per_player_difficulty );
-    difficulty->setTooltip(_("In multiplayer mode, players can select handicapped (more difficult) profiles on the kart selection screen"));
-
-    CheckBoxWidget* show_login = getWidget<CheckBoxWidget>("show-login");
-    assert( show_login!= NULL );
-    show_login->setState( UserConfigParams::m_always_show_login_screen);
-
-    // --- select the right skin in the spinner
-    bool currSkinFound = false;
-    const int skinCount = (int) m_skins.size();
-    std::string user_skin = StringUtils::toLowerCase(UserConfigParams::m_skin_file.c_str());
-    for (int n=0; n<skinCount; n++)
-    {
-        const std::string skinFileName = StringUtils::toLowerCase(StringUtils::getBasename(m_skins[n]));
-
-        if (user_skin == skinFileName)
-        {
-            skinSelector->setValue(n);
-            currSkinFound = true;
-            break;
-        }
-    }
-    if (!currSkinFound)
-    {
-        Log::warn("OptionsScreenUI",
-                  "Couldn't find current skin in the list of skins!");
-        skinSelector->setValue(0);
-        GUIEngine::reloadSkin();
-    }
+    CheckBoxWidget* buttons_en = getWidget<CheckBoxWidget>("touch_device");
+    assert(buttons_en != NULL);
+    buttons_en->setState(UserConfigParams::m_multitouch_mode != 0);
+    //~ UserConfigParams::m_multitouch_mode = buttons_en->getState() ? 1 : 0;
 
     // --- language
     ListWidget* list_widget = getWidget<ListWidget>("language");
@@ -353,6 +261,36 @@ void OptionsScreenUI::eventCallback(Widget* widget, const std::string& name, con
         user_config->saveConfig();
 
         OptionsScreenUI::getInstance()->push();
+    }
+    else if(name == "music")
+    {
+        CheckBoxWidget* w = dynamic_cast<CheckBoxWidget*>(widget);
+
+        UserConfigParams::m_music = w->getState();
+        Log::info("OptionsScreenAudio", "Music is now %s", ((bool) UserConfigParams::m_music) ? "on" : "off");
+
+        if(w->getState() == false)
+            music_manager->stopMusic();
+        else
+            music_manager->startMusic();
+    }
+    else if(name == "sound_effects")
+    {
+        CheckBoxWidget* w = dynamic_cast<CheckBoxWidget*>(widget);
+
+        UserConfigParams::m_sfx = w->getState();
+        SFXManager::get()->toggleSound(UserConfigParams::m_sfx);
+
+        if (UserConfigParams::m_sfx)
+        {
+            SFXManager::get()->quickSound("horn");
+        }
+    }
+    else if (name == "touch_device")
+    {
+        CheckBoxWidget* buttons_en = getWidget<CheckBoxWidget>("touch_device");
+        assert(buttons_en != NULL);
+        UserConfigParams::m_multitouch_mode = buttons_en->getState() ? 1 : 0;
     }
 
 }   // eventCallback

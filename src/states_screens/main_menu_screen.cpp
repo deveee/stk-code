@@ -46,7 +46,7 @@
 #include "states_screens/offline_kart_selection.hpp"
 #include "states_screens/online_profile_achievements.hpp"
 #include "states_screens/online_profile_servers.hpp"
-#include "states_screens/options_screen_video.hpp"
+#include "states_screens/options_screen_ui.hpp"
 #include "states_screens/state_manager.hpp"
 #include "states_screens/user_screen.hpp"
 #if DEBUG_MENU_ITEM
@@ -314,7 +314,7 @@ void MainMenuScreen::eventCallback(Widget* widget, const std::string& name,
     }
     else if (selection == "options")
     {
-        OptionsScreenVideo::getInstance()->push();
+        OptionsScreenUI::getInstance()->push();
     }
     else if (selection == "quit")
     {
