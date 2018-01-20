@@ -87,25 +87,6 @@ void MainMenuScreen::loadedFromFile()
     LabelWidget* w = getWidget<LabelWidget>("info_addons");
     w->setScrollSpeed(15);
     
-    RibbonWidget* rw_top = getWidget<RibbonWidget>("menu_toprow");
-    assert(rw_top != NULL);
-    
-    if (track_manager->getTrack("overworld") == NULL ||
-        track_manager->getTrack("introcutscene") == NULL ||
-        track_manager->getTrack("introcutscene2") == NULL)
-    {
-        rw_top->removeChildNamed("story");
-    }
-
-#if DEBUG_MENU_ITEM != 1
-    RibbonWidget* rw = getWidget<RibbonWidget>("menu_bottomrow");
-    rw->removeChildNamed("test_gpwin");
-    rw->removeChildNamed("test_gplose");
-    rw->removeChildNamed("test_unlocked");
-    rw->removeChildNamed("test_unlocked2");
-    rw->removeChildNamed("test_intro");
-    rw->removeChildNamed("test_outro");
-#endif
 }   // loadedFromFile
 
 // ----------------------------------------------------------------------------
@@ -120,9 +101,6 @@ void MainMenuScreen::beforeAddingWidget()
 void MainMenuScreen::init()
 {
     Screen::init();
-
-    m_user_id = getWidget<ButtonWidget>("user-id");
-    assert(m_user_id);
 
     // reset in case we're coming back from a race
     StateManager::get()->resetActivePlayers();
@@ -143,31 +121,7 @@ void MainMenuScreen::init()
     // the key bindings for the first player the default again.
     input_manager->getDeviceManager()->clearLatestUsedDevice();
 
-    if (addons_manager->isLoading())
-    {
-        IconButtonWidget* w = getWidget<IconButtonWidget>("addons");
-        w->setActive(false);
-        w->resetAllBadges();
-        w->setBadge(LOADING_BADGE);
-    }
-
-    m_online = getWidget<IconButtonWidget>("online");
-
-    if(!m_enable_online)
-        m_online->setActive(false);
-
-    LabelWidget* w = getWidget<LabelWidget>("info_addons");
-    const core::stringw &news_text = NewsManager::get()->getNextNewsMessage();
-    w->setText(news_text, true);
-    w->update(0.01f);
-
-    RibbonWidget* r = getWidget<RibbonWidget>("menu_bottomrow");
-    // FIXME: why do I need to do this manually
-    ((IconButtonWidget*)r->getChildren().get(0))->unfocused(PLAYER_ID_GAME_MASTER, NULL);
-    ((IconButtonWidget*)r->getChildren().get(1))->unfocused(PLAYER_ID_GAME_MASTER, NULL);
-    ((IconButtonWidget*)r->getChildren().get(2))->unfocused(PLAYER_ID_GAME_MASTER, NULL);
-
-    r = getWidget<RibbonWidget>("menu_toprow");
+    RibbonWidget* r = getWidget<RibbonWidget>("menu_toprow");
     r->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
     DemoWorld::resetIdleTime();
 
@@ -182,61 +136,7 @@ void MainMenuScreen::init()
 void MainMenuScreen::onUpdate(float delta)
 
 {
-    PlayerProfile *player = PlayerManager::getCurrentPlayer();
-    if(PlayerManager::getCurrentOnlineState() == PlayerProfile::OS_GUEST  ||
-       PlayerManager::getCurrentOnlineState() == PlayerProfile::OS_SIGNED_IN)
-    {
-        m_user_id->setText(player->getLastOnlineName() + "@stk");
-        m_online->setActive(true);
-        m_online->setLabel(m_online_string);
-    }
-    else if (PlayerManager::getCurrentOnlineState() == PlayerProfile::OS_SIGNED_OUT)
-    {
-        m_online->setActive(true);
-        m_online->setLabel(m_login_string);
-        m_user_id->setText(player->getName());
-    }
-    else
-    {
-        // now must be either logging in or logging out
-        m_online->setActive(false);
-        m_user_id->setText(player->getName());
-    }
 
-    m_online->setLabel(PlayerManager::getCurrentOnlineId() ? m_online_string
-                                                           : m_login_string);
-    IconButtonWidget* addons_icon = getWidget<IconButtonWidget>("addons");
-    if (addons_icon != NULL)
-    {
-        if (addons_manager->wasError())
-        {
-            addons_icon->setActive(true);
-            addons_icon->resetAllBadges();
-            addons_icon->setBadge(BAD_BADGE);
-        }
-        else if (addons_manager->isLoading() && UserConfigParams::m_internet_status
-            == Online::RequestManager::IPERM_ALLOWED)
-        {
-            // Addons manager is still initialising/downloading.
-            addons_icon->setActive(false);
-            addons_icon->resetAllBadges();
-            addons_icon->setBadge(LOADING_BADGE);
-        }
-        else
-        {
-            addons_icon->setActive(true);
-            addons_icon->resetAllBadges();
-        }
-        // maybe add a new badge when not allowed to access the net
-    }
-
-    LabelWidget* w = getWidget<LabelWidget>("info_addons");
-    w->update(delta);
-    if(w->scrolledOff())
-    {
-        const core::stringw &news_text = NewsManager::get()->getNextNewsMessage();
-        w->setText(news_text, true);
-    }
 }   // onUpdate
 
 // ----------------------------------------------------------------------------
@@ -244,12 +144,6 @@ void MainMenuScreen::onUpdate(float delta)
 void MainMenuScreen::eventCallback(Widget* widget, const std::string& name,
                                    const int playerID)
 {
-    if(name=="user-id")
-    {
-        UserScreen::getInstance()->push();
-        return;
-    }
-
     // most interesting stuff is in the ribbons, so start there
     RibbonWidget* ribbon = dynamic_cast<RibbonWidget*>(widget);
 
