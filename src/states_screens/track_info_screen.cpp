@@ -21,6 +21,7 @@
 #include "challenges/unlock_manager.hpp"
 #include "config/player_manager.hpp"
 #include "config/user_config.hpp"
+#include "graphics/irr_driver.hpp"
 #include "graphics/stk_tex_manager.hpp"
 #include "guiengine/engine.hpp"
 #include "guiengine/screen.hpp"
@@ -68,9 +69,7 @@ void TrackInfoScreen::loadedFromFile()
     m_lap_spinner     = getWidget<SpinnerWidget>("lap-spinner");
     m_ai_kart_spinner = getWidget<SpinnerWidget>("ai-spinner");
     m_option          = getWidget<CheckBoxWidget>("option");
-    m_record_race     = getWidget<CheckBoxWidget>("record");
     m_option->setState(false);
-    m_record_race->setState(false);
 
     m_highscore_label = getWidget<LabelWidget>("highscores");
 
@@ -85,6 +84,14 @@ void TrackInfoScreen::loadedFromFile()
     GUIEngine::IconButtonWidget* screenshot = getWidget<IconButtonWidget>("screenshot");
     screenshot->setFocusable(false);
     screenshot->m_tab_stop = false;
+    
+    const int screen_height = irr_driver->getActualScreenSize().Height;
+    
+    if (screen_height <= 480)
+    {
+        RibbonWidget* bt_start = getWidget<GUIEngine::RibbonWidget>("buttons");
+        bt_start->setLabel(0, "");
+    }
 }   // loadedFromFile
 
 // ----------------------------------------------------------------------------
@@ -112,13 +119,13 @@ void TrackInfoScreen::init()
     getWidget<LabelWidget>("author")->setText( _("Track by %s", m_track->getDesigner()),
                                                false );
 
-    LabelWidget* max_players = getWidget<LabelWidget>("max-arena-players");
-    max_players->setVisible(m_track->isArena());
-    if (m_track->isArena())
-    {
-        //I18N: the max players supported by an arena.
-        max_players->setText( _("Max players supported: %d", max_arena_players), false );
-    }
+    //~ LabelWidget* max_players = getWidget<LabelWidget>("max-arena-players");
+    //~ max_players->setVisible(m_track->isArena());
+    //~ if (m_track->isArena())
+    //~ {
+        //~ //I18N: the max players supported by an arena.
+        //~ max_players->setText( _("Max players supported: %d", max_arena_players), false );
+    //~ }
 
     // ---- Track screenshot
     GUIEngine::IconButtonWidget* screenshot = getWidget<IconButtonWidget>("screenshot");
@@ -224,11 +231,6 @@ void TrackInfoScreen::init()
     }
     else
         m_option->setState(false);
-
-    // Record race or not
-    // -------------
-    m_record_race->setVisible(false);
-    getWidget<LabelWidget>("record-race-text")->setVisible(false);
 
 
     // ---- High Scores
