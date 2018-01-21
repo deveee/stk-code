@@ -118,7 +118,7 @@ void RaceGUIMultitouch::initMultitouchSteering()
     const float btn_size = 0.125f * h * scale;
     const float btn2_size = 0.35f * h * scale;
     const float margin = 0.075f * h * scale;
-    const float margin_top = 0.3f * h;
+    const float margin_top = 0.4f * h;
     const float col_size = (btn_size + margin);
 
     const float small_ratio = 0.9f;
@@ -149,11 +149,11 @@ void RaceGUIMultitouch::initMultitouchSteering()
                         //~ int(steering_btn_x), int(steering_btn_y),
                         //~ int(btn2_size), int(btn2_size));
     m_device->addButton(BUTTON_LEFT,
-                        int(margin_big), int(h * 0.5),
-                        int(btn_big_size), int(btn_big_size));
+                        int(0), int(0),
+                        int(btn_big_size + 2*margin_big), int(h));
     m_device->addButton(BUTTON_RIGHT,
-                        int(w - margin_big - btn_big_size), int(h * 0.5),
-                        int(btn_big_size), int(btn_big_size));
+                        int(w - 2*margin_big - btn_big_size), int(0),
+                        int(btn_big_size + 2*margin_big), int(h));
     m_device->addButton(BUTTON_FIRE,
                         int((w - btn_big_size) / 2),  int(h - margin_big - btn_big_size),
                         int(btn_big_size), int(btn_big_size));
@@ -210,6 +210,38 @@ void RaceGUIMultitouch::drawMultitouchSteering(const AbstractKart* kart,
 #ifndef SERVER_ONLY
     if (m_device == NULL)
         return;
+        
+    const float scale = UserConfigParams::m_multitouch_scale;
+
+    const int w = irr_driver->getActualScreenSize().Width;
+    const int h = irr_driver->getActualScreenSize().Height;
+    const float btn_size = 0.125f * h * scale;
+    const float margin = 0.075f * h * scale;
+
+    const float big_ratio = 1.75f;
+    const float btn_big_size = big_ratio * btn_size;
+    const float margin_big = margin * 0.5;
+    
+    const int button_left_x = margin_big;
+    const int button_right_x = w - margin_big - btn_big_size;
+    const int button_y = h * 0.5;
+    
+    core::rect<s32> btn_pos_left(button_left_x, button_y, 
+                                 button_left_x + btn_big_size, 
+                                 button_y + btn_big_size);
+    core::rect<s32> btn_pos_left_bg(button_left_x - btn_big_size * 0.2f, 
+                                    button_y - btn_big_size * 0.2f,
+                                    button_left_x + btn_big_size * 1.2f, 
+                                    button_y + btn_big_size * 1.2f);
+                                    
+    core::rect<s32> btn_pos_right(button_right_x, button_y, 
+                                  button_right_x + btn_big_size, 
+                                  button_y + btn_big_size);
+    core::rect<s32> btn_pos_right_bg(button_right_x - btn_big_size * 0.2f, 
+                                    button_y - btn_big_size * 0.2f,
+                                    button_right_x + btn_big_size * 1.2f, 
+                                    button_y + btn_big_size * 1.2f);
+    
 
     for (unsigned int i = 0; i < m_device->getButtonsCount(); i++)
     {
@@ -252,9 +284,13 @@ void RaceGUIMultitouch::drawMultitouchSteering(const AbstractKart* kart,
             {
             case MultitouchButtonType::BUTTON_LEFT:
                 btn_texture = m_left_tex;
+                btn_pos = btn_pos_left;
+                btn_pos_bg = btn_pos_left_bg;
                 break;
             case MultitouchButtonType::BUTTON_RIGHT:
                 btn_texture = m_right_tex;
+                btn_pos = btn_pos_right;
+                btn_pos_bg = btn_pos_right_bg;
                 break;
             case MultitouchButtonType::BUTTON_ESCAPE:
                 btn_texture = m_pause_tex;
