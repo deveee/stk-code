@@ -757,11 +757,11 @@ void IrrDriver::showPointer()
 void IrrDriver::hidePointer()
 {
     // always visible in artist debug mode, to be able to use the context menu
-    if (UserConfigParams::m_artist_debug_mode)
-    {
+    //~ if (UserConfigParams::m_artist_debug_mode)
+    //~ {
         this->getDevice()->getCursorControl()->setVisible(true);
         return;
-    }
+    //~ }
 
     if (m_pointer_shown)
     {
