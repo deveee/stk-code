@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <stkgui>
     <div x="2%" y="10%" width="96%" height="80%" layout="vertical-row" >
-        <label id="title" width="100%" text_align="top" word_wrap="true" proportion="1" />
+        <label id="title" width="100%" text_align="top" word_wrap="true" proportion="2" />
 
-        <spacer height="25" width="10" />
+        <spacer height="10" width="10" />
 
-        <buttonbar id="buttons" height="30%" width="30%" align="center">
+        <buttonbar id="buttons" width="30%" proportion="3" align="center">
 
             <icon-button id="confirm" icon="gui/green_check.png" I18N="In a 'are you sure?' dialog"
                 text="Yes" align="center"/>
