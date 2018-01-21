@@ -1395,7 +1395,7 @@ void initRest()
     // This only initialises the non-network part of the add-ons manager. The
     // online section of the add-ons manager will be initialised from a
     // separate thread running in network HTTP.
-    addons_manager          = new AddonsManager();
+    //~ addons_manager          = new AddonsManager();
     Online::ProfileManager::create();
 
     // The request manager will start the login process in case of a saved
@@ -1403,8 +1403,8 @@ void initRest()
     // The rest will be read later (since the rest needs the unlock- and
     // achievement managers to be created, which can only be created later).
     PlayerManager::create();
-    Online::RequestManager::get()->startNetworkThread();
-    NewsManager::get();   // this will create the news manager
+    //~ Online::RequestManager::get()->startNetworkThread();
+    //~ NewsManager::get();   // this will create the news manager
 
     music_manager = new MusicManager();
     SFXManager::create();
@@ -1466,50 +1466,50 @@ void initRest()
 //=============================================================================
 void askForInternetPermission()
 {
-    if (UserConfigParams::m_internet_status !=
-        Online::RequestManager::IPERM_NOT_ASKED)
-        return;
+    //~ if (UserConfigParams::m_internet_status !=
+        //~ Online::RequestManager::IPERM_NOT_ASKED)
+        //~ return;
 
-    class ConfirmServer :
-          public MessageDialog::IConfirmDialogListener
-    {
-    public:
-        virtual void onConfirm()
-        {
-            // Typically internet is disabled here (just better safe
-            // than sorry). If internet should be allowed, the news
-            // manager needs to be started (which in turn activates
-            // the add-ons manager).
-            bool need_to_start_news_manager =
-                UserConfigParams::m_internet_status !=
-                                  Online::RequestManager::IPERM_ALLOWED;
-            UserConfigParams::m_internet_status =
-                                  Online::RequestManager::IPERM_ALLOWED;
-            if (need_to_start_news_manager)
-                NewsManager::get()->init(false);
-            GUIEngine::ModalDialog::dismiss();
-        }   // onConfirm
-        // --------------------------------------------------------
-        virtual void onCancel()
-        {
-            UserConfigParams::m_internet_status =
-                Online::RequestManager::IPERM_NOT_ALLOWED;
-            GUIEngine::ModalDialog::dismiss();
-        }   // onCancel
-    };   // ConfirmServer
+    //~ class ConfirmServer :
+          //~ public MessageDialog::IConfirmDialogListener
+    //~ {
+    //~ public:
+        //~ virtual void onConfirm()
+        //~ {
+            //~ // Typically internet is disabled here (just better safe
+            //~ // than sorry). If internet should be allowed, the news
+            //~ // manager needs to be started (which in turn activates
+            //~ // the add-ons manager).
+            //~ bool need_to_start_news_manager =
+                //~ UserConfigParams::m_internet_status !=
+                                  //~ Online::RequestManager::IPERM_ALLOWED;
+            //~ UserConfigParams::m_internet_status =
+                                  //~ Online::RequestManager::IPERM_ALLOWED;
+            //~ if (need_to_start_news_manager)
+                //~ NewsManager::get()->init(false);
+            //~ GUIEngine::ModalDialog::dismiss();
+        //~ }   // onConfirm
+        //~ // --------------------------------------------------------
+        //~ virtual void onCancel()
+        //~ {
+            //~ UserConfigParams::m_internet_status =
+                //~ Online::RequestManager::IPERM_NOT_ALLOWED;
+            //~ GUIEngine::ModalDialog::dismiss();
+        //~ }   // onCancel
+    //~ };   // ConfirmServer
 
-    GUIEngine::ModalDialog *dialog =
-    new MessageDialog(_("SuperTuxKart may connect to a server "
-        "to download add-ons and notify you of updates. We also collect "
-        "anonymous hardware statistics to help with the development of STK. "
-        "Please read our privacy policy at http://privacy.supertuxkart.net. "
-        "Would you like this feature to be enabled? (To change this setting "
-        "at a later time, go to options, select tab "
-        "'User Interface', and edit \"Connect to the "
-        "Internet\" and \"Send anonymous HW statistics\")."),
-        MessageDialog::MESSAGE_DIALOG_YESNO,
-        new ConfirmServer(), true, true, 0.7f, 0.7f);
-    GUIEngine::DialogQueue::get()->pushDialog(dialog, false);
+    //~ GUIEngine::ModalDialog *dialog =
+    //~ new MessageDialog(_("SuperTuxKart may connect to a server "
+        //~ "to download add-ons and notify you of updates. We also collect "
+        //~ "anonymous hardware statistics to help with the development of STK. "
+        //~ "Please read our privacy policy at http://privacy.supertuxkart.net. "
+        //~ "Would you like this feature to be enabled? (To change this setting "
+        //~ "at a later time, go to options, select tab "
+        //~ "'User Interface', and edit \"Connect to the "
+        //~ "Internet\" and \"Send anonymous HW statistics\")."),
+        //~ MessageDialog::MESSAGE_DIALOG_YESNO,
+        //~ new ConfirmServer(), true, true, 0.7f, 0.7f);
+    //~ GUIEngine::DialogQueue::get()->pushDialog(dialog, false);
 }   // askForInternetPermission
 
 //=============================================================================
@@ -1617,27 +1617,27 @@ int main(int argc, char *argv[] )
         //handleCmdLine() needs InitTuxkart() so it can't be called first
         if(!handleCmdLine()) exit(0);
 
-        addons_manager->checkInstalledAddons();
+        //~ addons_manager->checkInstalledAddons();
 
         // Load addons.xml to get info about add-ons even when not
         // allowed to access the Internet
-        if (UserConfigParams::m_internet_status !=
-            Online::RequestManager::IPERM_ALLOWED)
-        {
-            std::string xml_file = file_manager->getAddonsFile("addonsX.xml");
-            if (file_manager->fileExists(xml_file))
-            {
-                try
-                {
-                    const XMLNode *xml = new XMLNode(xml_file);
-                    addons_manager->initAddons(xml);
-                }
-                catch (std::runtime_error& e)
-                {
-                    Log::warn("Addons", "Exception thrown when initializing add-ons manager : %s", e.what());
-                }
-            }
-        }
+        //~ if (UserConfigParams::m_internet_status !=
+            //~ Online::RequestManager::IPERM_ALLOWED)
+        //~ {
+            //~ std::string xml_file = file_manager->getAddonsFile("addonsX.xml");
+            //~ if (file_manager->fileExists(xml_file))
+            //~ {
+                //~ try
+                //~ {
+                    //~ const XMLNode *xml = new XMLNode(xml_file);
+                    //~ addons_manager->initAddons(xml);
+                //~ }
+                //~ catch (std::runtime_error& e)
+                //~ {
+                    //~ Log::warn("Addons", "Exception thrown when initializing add-ons manager : %s", e.what());
+                //~ }
+            //~ }
+        //~ }
 
         if(UserConfigParams::m_unit_testing)
         {
@@ -1666,10 +1666,10 @@ int main(int argc, char *argv[] )
 #endif
         // Note that on the very first run of STK internet status is set to
         // "not asked", so the report will only be sent in the next run.
-        if(UserConfigParams::m_internet_status==Online::RequestManager::IPERM_ALLOWED)
-        {
-            HardwareStats::reportHardwareStats();
-        }
+        //~ if(UserConfigParams::m_internet_status==Online::RequestManager::IPERM_ALLOWED)
+        //~ {
+            //~ HardwareStats::reportHardwareStats();
+        //~ }
 
         // This can only be the case if --connect-now was used, which adds
         // a server to the server list.
@@ -1712,7 +1712,7 @@ int main(int argc, char *argv[] )
                 wiimote_manager->askUserToConnectWiimotes();
             }
 #endif
-            askForInternetPermission();
+            //~ askForInternetPermission();
         }
         else
         {
@@ -1722,14 +1722,14 @@ int main(int argc, char *argv[] )
         }
 
         // If an important news message exists it is shown in a popup dialog.
-        const core::stringw important_message =
-                                     NewsManager::get()->getImportantMessage();
-        if(important_message!="")
-        {
-            new MessageDialog(important_message,
-                              MessageDialog::MESSAGE_DIALOG_OK,
-                              NULL, true);
-        }   // if important_message
+        //~ const core::stringw important_message =
+                                     //~ NewsManager::get()->getImportantMessage();
+        //~ if(important_message!="")
+        //~ {
+            //~ new MessageDialog(important_message,
+                              //~ MessageDialog::MESSAGE_DIALOG_OK,
+                              //~ NULL, true);
+        //~ }   // if important_message
 
 
         // Replay a race
@@ -1789,8 +1789,8 @@ int main(int argc, char *argv[] )
     StateManager::get()->resetActivePlayers();
     if(input_manager) delete input_manager; // if early crash avoid delete NULL
 
-    if(NetworkConfig::get()->isNetworking() && STKHost::existHost())
-        STKHost::get()->abort();
+    //~ if(NetworkConfig::get()->isNetworking() && STKHost::existHost())
+        //~ STKHost::get()->abort();
 
     cleanSuperTuxKart();
 
@@ -1832,8 +1832,8 @@ static void cleanSuperTuxKart()
 
     delete main_loop;
 
-    if(Online::RequestManager::isRunning())
-        Online::RequestManager::get()->stopNetworkThread();
+    //~ if(Online::RequestManager::isRunning())
+        //~ Online::RequestManager::get()->stopNetworkThread();
 
     // Stop music (this request will go into the sfx manager queue, so it needs
     // to be done before stopping the thread).
@@ -1870,17 +1870,17 @@ static void cleanSuperTuxKart()
     // was deleted (in cleanUserConfig below), but before STK finishes and
     // the OS takes all threads down.
 
-    if(!NewsManager::get()->waitForReadyToDeleted(2.0f))
-    {
-        Log::info("Thread", "News manager not stopping, exiting anyway.");
-    }
-    NewsManager::deallocate();
+    //~ if(!NewsManager::get()->waitForReadyToDeleted(2.0f))
+    //~ {
+        //~ Log::info("Thread", "News manager not stopping, exiting anyway.");
+    //~ }
+    //~ NewsManager::deallocate();
 
-    if(!Online::RequestManager::get()->waitForReadyToDeleted(5.0f))
-    {
-        Log::info("Thread", "Request Manager not aborting in time, aborting.");
-    }
-    Online::RequestManager::deallocate();
+    //~ if(!Online::RequestManager::get()->waitForReadyToDeleted(5.0f))
+    //~ {
+        //~ Log::info("Thread", "Request Manager not aborting in time, aborting.");
+    //~ }
+    //~ Online::RequestManager::deallocate();
 
     if (!SFXManager::get()->waitForReadyToDeleted(2.0f))
     {
@@ -1895,13 +1895,13 @@ static void cleanSuperTuxKart()
 
     // The add-ons manager might still be called from a currenty running request
     // in the request manager, so it can not be deleted earlier.
-    if(addons_manager)  delete addons_manager;
+    //~ if(addons_manager)  delete addons_manager;
 
     // FIXME: do we need to wait for threads there, can they be
     // moved further up?
-    ServersManager::deallocate();
-    if(NetworkConfig::get()->isNetworking() && STKHost::existHost())
-        STKHost::destroy();
+    //~ ServersManager::deallocate();
+    //~ if(NetworkConfig::get()->isNetworking() && STKHost::existHost())
+        //~ STKHost::destroy();
 
     cleanUserConfig();
 
