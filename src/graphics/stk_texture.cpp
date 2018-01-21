@@ -359,9 +359,12 @@ video::IImage* STKTexture::resizeImage(video::IImage* orig_img,
 #ifndef SERVER_ONLY
     if (image == NULL)
         assert(orig_size && orig_size->Width > 0 && orig_size->Height > 0);
+        
+    bool npot_usable = CVS->isNpotTexturesUsable() && 
+        irr_driver->getVideoDriver()->queryFeature(video::EVDF_TEXTURE_NPOT);
+        
     core::dimension2du img_size = image ? image->getDimension() : *orig_size;
-    core::dimension2du tex_size = img_size.getOptimalSize
-        (!irr_driver->getVideoDriver()->queryFeature(video::EVDF_TEXTURE_NPOT));
+    core::dimension2du tex_size = img_size.getOptimalSize(!npot_usable);
     const core::dimension2du& max_size = irr_driver->getVideoDriver()
         ->getDriverAttributes().getAttributeAsDimension2d("MAX_TEXTURE_SIZE");
 

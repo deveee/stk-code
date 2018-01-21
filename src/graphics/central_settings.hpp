@@ -46,6 +46,7 @@ private:
     bool hasTextureSwizzle;
     bool hasPixelBufferObject;
     bool hasSRGBFramebuffer;
+    bool hasNpotTextures;
 
 #if defined(USE_GLES2)
     bool hasBGRA;
@@ -96,6 +97,7 @@ public:
     bool isEXTColorBufferFloatUsable() const;
 #endif
 
+    bool isNpotTexturesUsable() const;
 
     // Are all required extensions available for feature support
     bool supportsShadows() const;

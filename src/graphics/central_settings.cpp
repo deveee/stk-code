@@ -54,6 +54,7 @@ void CentralVideoSettings::init()
     hasTextureSwizzle = false;
     hasPixelBufferObject = false;
     hasSRGBFramebuffer = false;
+    hasNpotTextures = false;
 
 #if defined(USE_GLES2)
     hasBGRA = false;
@@ -102,6 +103,8 @@ void CentralVideoSettings::init()
         }
 
 #if !defined(USE_GLES2)
+        hasNpotTextures = true;
+
         if (hasGLExtension("GL_AMD_vertex_shader_layer")) {
             hasVSLayer = true;
             Log::info("GLDriver", "AMD Vertex Shader Layer Present");
@@ -252,6 +255,8 @@ void CentralVideoSettings::init()
             hasTextureStorage = true;
             hasTextureSwizzle = true;
         }
+        
+        hasNpotTextures = (m_gl_major_version >= 3);
 
         if (!GraphicsRestrictions::isDisabled(GraphicsRestrictions::GR_EXPLICIT_ATTRIB_LOCATION) &&
             m_glsl == true)
@@ -456,6 +461,11 @@ bool CentralVideoSettings::isEXTColorBufferFloatUsable() const
     return hasColorBufferFloat;
 }
 #endif
+
+bool CentralVideoSettings::isNpotTexturesUsable() const
+{
+    return hasNpotTextures;
+}
 
 bool CentralVideoSettings::supportsShadows() const
 {
