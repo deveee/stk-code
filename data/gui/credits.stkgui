@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <stkgui>
-    <icon-button id="back" x="0" y="0" height="8%" icon="gui/back.png"/>
+    <icon-button id="back" x="0" y="0" height="10%" icon="gui/back.png"/>
 
     <div x="2%" y="2%" width="98%" height="96%" layout="vertical-row" >
 

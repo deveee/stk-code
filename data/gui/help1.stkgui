@@ -61,5 +61,5 @@
         </box>
     </div>
 
-    <icon-button id="back" x="0" y="0" height="8%" icon="gui/back.png"/>
+    <icon-button id="back" x="0" y="0" height="10%" icon="gui/back.png"/>
 </stkgui>
