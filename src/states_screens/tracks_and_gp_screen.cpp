@@ -207,12 +207,12 @@ void TracksAndGPScreen::init()
     }
 
     // Random GP
-    std::vector<std::string> screenshots;
-    screenshots.push_back(file_manager->getAsset(FileManager::GUI, "main_help.png"));
-    gps_widget->addAnimatedItem(translations->fribidize(GrandPrixData::getRandomGPName()),
-                                GrandPrixData::getRandomGPID(),
-                                screenshots, 1.5f, 0,
-                                IconButtonWidget::ICON_PATH_TYPE_ABSOLUTE);
+    //~ std::vector<std::string> screenshots;
+    //~ screenshots.push_back(file_manager->getAsset(FileManager::GUI, "main_help.png"));
+    //~ gps_widget->addAnimatedItem(translations->fribidize(GrandPrixData::getRandomGPName()),
+                                //~ GrandPrixData::getRandomGPID(),
+                                //~ screenshots, 1.5f, 0,
+                                //~ IconButtonWidget::ICON_PATH_TYPE_ABSOLUTE);
 
     gps_widget->updateItemDisplay();
 

@@ -227,26 +227,9 @@ void TrackInfoScreen::init()
 
     // Record race or not
     // -------------
-    const bool record_available = race_manager->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL;
-    m_record_race->setVisible(record_available);
-    getWidget<LabelWidget>("record-race-text")->setVisible(record_available);
-    if (race_manager->isRecordingRace())
-    {
-        // isRecordingRace() is true when it's pre-set by ghost replay selection
-        // which force record this race
-        m_record_this_race = true;
-        m_record_race->setState(true);
-        m_record_race->setActive(false);
-        m_ai_kart_spinner->setValue(0);
-        m_ai_kart_spinner->setActive(false);
-        race_manager->setNumKarts(race_manager->getNumLocalPlayers());
-        UserConfigParams::m_num_karts = race_manager->getNumLocalPlayers();
-    }
-    else if (record_available)
-    {
-        m_record_race->setActive(true);
-        m_record_race->setState(false);
-    }
+    m_record_race->setVisible(false);
+    getWidget<LabelWidget>("record-race-text")->setVisible(false);
+
 
     // ---- High Scores
     m_highscore_label->setVisible(has_highscores);
@@ -338,7 +321,7 @@ void TrackInfoScreen::updateHighScores()
 void TrackInfoScreen::onEnterPressedInternal()
 {
 
-    race_manager->setRecordRace(m_record_this_race);
+    race_manager->setRecordRace(false);
     // Create a copy of member variables we still need, since they will
     // not be accessible after dismiss:
     const int num_laps = race_manager->modeHasLaps() ? m_lap_spinner->getValue()

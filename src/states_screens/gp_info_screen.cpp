@@ -77,10 +77,10 @@ void GPInfoScreen::loadedFromFile()
     m_reverse_spinner->addLabel(_("Random"));
     m_reverse_spinner->setValue(0);
 
-    m_num_tracks_spinner = getWidget<SpinnerWidget>("track-spinner");
-    // Only init the number of tracks here, this way the previously selected
-    // number of tracks will be the default.
-    m_num_tracks_spinner->setValue(1);
+    //~ m_num_tracks_spinner = getWidget<SpinnerWidget>("track-spinner");
+    //~ // Only init the number of tracks here, this way the previously selected
+    //~ // number of tracks will be the default.
+    //~ m_num_tracks_spinner->setValue(1);
 
     m_ai_kart_spinner = getWidget<SpinnerWidget>("ai-spinner");
     
@@ -167,10 +167,10 @@ void GPInfoScreen::init()
 
     bool random = m_gp.isRandomGP();
 
-    getWidget<LabelWidget  >("track-text"   )->setVisible(random);
-    m_num_tracks_spinner->setVisible(random);
-    getWidget<LabelWidget  >("group-text"   )->setVisible(random);
-    m_group_spinner->setVisible(random);
+    //~ getWidget<LabelWidget  >("track-text"   )->setVisible(random);
+    //~ m_num_tracks_spinner->setVisible(random);
+    //~ getWidget<LabelWidget  >("group-text"   )->setVisible(random);
+    //~ m_group_spinner->setVisible(random);
 
 
     if(random)
