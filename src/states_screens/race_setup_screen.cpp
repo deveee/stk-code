@@ -80,12 +80,19 @@ void RaceSetupScreen::init()
     DynamicRibbonWidget* w2 = getWidget<DynamicRibbonWidget>("gamemode");
     assert( w2 != NULL );
     w2->clearItems();
+    
+    const int screen_height = irr_driver->getActualScreenSize().Height;
 
     // ---- Add game modes
     irr::core::stringw name1 = irr::core::stringw(
         RaceManager::getNameOf(RaceManager::MINOR_MODE_NORMAL_RACE)) + L"\n";
     //FIXME: avoid duplicating descriptions from the help menu!
     name1 +=  _("All blows allowed, so catch weapons and make clever use of them!");
+    
+    if (screen_height <= 480)
+    {
+        name1 = "";
+    }
 
     w2->addItem( name1, IDENT_STD, RaceManager::getIconOf(RaceManager::MINOR_MODE_NORMAL_RACE));
 
@@ -93,6 +100,12 @@ void RaceSetupScreen::init()
         RaceManager::getNameOf(RaceManager::MINOR_MODE_TIME_TRIAL)) + L"\n";
     //FIXME: avoid duplicating descriptions from the help menu!
     name2 += _("Contains no powerups, so only your driving skills matter!");
+    
+    if (screen_height <= 480)
+    {
+        name2 = "";
+    }
+    
     w2->addItem( name2, IDENT_TTRIAL, RaceManager::getIconOf(RaceManager::MINOR_MODE_TIME_TRIAL));
 
     //~ if (PlayerManager::getCurrentPlayer()->isLocked(IDENT_FTL))
@@ -113,11 +126,23 @@ void RaceSetupScreen::init()
         RaceManager::getNameOf(RaceManager::MINOR_MODE_3_STRIKES)) + L"\n";
     //FIXME: avoid duplicating descriptions from the help menu!
     name4 += _("Hit others with weapons until they lose all their lives.");
+    
+    if (screen_height <= 480)
+    {
+        name4 = "";
+    }
+    
     w2->addItem( name4, IDENT_STRIKES, RaceManager::getIconOf(RaceManager::MINOR_MODE_3_STRIKES));
 
     irr::core::stringw name5 = irr::core::stringw(
         RaceManager::getNameOf(RaceManager::MINOR_MODE_SOCCER)) + L"\n";
     name5 += _("Push the ball into the opposite cage to score goals.");
+    
+    if (screen_height <= 480)
+    {
+        name5 = "";
+    }
+    
     w2->addItem( name5, IDENT_SOCCER, RaceManager::getIconOf(RaceManager::MINOR_MODE_SOCCER));
 
 //~ #define ENABLE_EASTER_EGG_MODE
