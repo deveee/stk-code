@@ -105,18 +105,19 @@ GUIEngine::EventPropagation
     GUIEngine::RibbonWidget* choice_ribbon =
             getWidget<GUIEngine::RibbonWidget>("choiceribbon");
 
-    if (eventSource == "backbtn")
-    {
-        // unpausing is done in the destructor so nothing more to do here
-        ModalDialog::dismiss();
-        return GUIEngine::EVENT_BLOCK;
-    }
-    else if (eventSource == "choiceribbon")
+
+    if (eventSource == "choiceribbon")
     {
         const std::string& selection =
             choice_ribbon->getSelectionIDString(PLAYER_ID_GAME_MASTER);
 
-        if (selection == "exit")
+        if (selection == "backbtn")
+        {
+            // unpausing is done in the destructor so nothing more to do here
+            ModalDialog::dismiss();
+            return GUIEngine::EVENT_BLOCK;
+        }
+        else if (selection == "exit")
         {
             ModalDialog::dismiss();
             race_manager->exitRace();
