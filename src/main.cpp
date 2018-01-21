@@ -1650,7 +1650,7 @@ int main(int argc, char *argv[] )
         {
             // Some Android devices have only 320x240 and height >= 480 is bare
             // minimum to make the GUI working as expected.
-            if (irr_driver->getActualScreenSize().Height < 480)
+            if (irr_driver->getActualScreenSize().Height <= 320)
             {
                 if (UserConfigParams::m_old_driver_popup)
                 {
