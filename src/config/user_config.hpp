@@ -405,7 +405,7 @@ namespace UserConfigParams
                                             "Settings for the multitouch device") );
 
     PARAM_PREFIX BoolUserConfigParam         m_multitouch_enabled
-            PARAM_DEFAULT( BoolUserConfigParam(false, "multitouch_enabled",
+            PARAM_DEFAULT( BoolUserConfigParam(true, "multitouch_enabled",
             &m_multitouch_group,
             "Enable multitouch support.") );
             
@@ -448,7 +448,7 @@ namespace UserConfigParams
             "multitouch interface."));
 
     PARAM_PREFIX BoolUserConfigParam         m_screen_keyboard
-            PARAM_DEFAULT( BoolUserConfigParam(false, "screen_keyboard",
+            PARAM_DEFAULT( BoolUserConfigParam(true, "screen_keyboard",
             &m_multitouch_group,
             "Enable screen keyboard.") );
 
@@ -521,7 +521,7 @@ namespace UserConfigParams
      *  to e.g. disable h.d. textures on hd3000 as default, but still allow the
      *  user to enable it. */
     PARAM_PREFIX IntUserConfigParam        m_high_definition_textures
-        PARAM_DEFAULT(IntUserConfigParam(1, "enable_high_definition_textures",
+        PARAM_DEFAULT(IntUserConfigParam(0, "enable_high_definition_textures",
         &m_video_group, "Enable high definition textures. Bit flag: "
                         "bit 0 = enabled/disabled; bit 1 = set by user/set as default"));
     PARAM_PREFIX BoolUserConfigParam        m_glow
@@ -534,7 +534,7 @@ namespace UserConfigParams
         PARAM_DEFAULT(BoolUserConfigParam(false, "enable_light_shaft",
         &m_video_group, "Enable Light Shafts"));
     PARAM_PREFIX BoolUserConfigParam        m_dynamic_lights
-        PARAM_DEFAULT(BoolUserConfigParam(true, "enable_dynamic_lights",
+        PARAM_DEFAULT(BoolUserConfigParam(false, "enable_dynamic_lights",
         &m_video_group, "Enable Dynamic Lights"));
     PARAM_PREFIX BoolUserConfigParam        m_dof
         PARAM_DEFAULT(BoolUserConfigParam(false, "enable_dof",
@@ -559,7 +559,7 @@ namespace UserConfigParams
         &m_video_group, "Allows to increase performance by setting lower RTTs "
                         "resolution. Value should be smaller or equal to 1.0"));
     PARAM_PREFIX IntUserConfigParam         m_max_texture_size
-        PARAM_DEFAULT(IntUserConfigParam(512, "max_texture_size",
+        PARAM_DEFAULT(IntUserConfigParam(256, "max_texture_size",
         &m_video_group, "Max texture size when high definition textures are "
                         "disabled"));
 
@@ -656,7 +656,7 @@ namespace UserConfigParams
 
     PARAM_PREFIX bool m_race_now          PARAM_DEFAULT( false );
 
-    PARAM_PREFIX bool m_enforce_current_player PARAM_DEFAULT( false );
+    PARAM_PREFIX bool m_enforce_current_player PARAM_DEFAULT( true );
 
     /** True to test funky ambient/diffuse/specularity in RGB &
      *  all anisotropic */
@@ -899,7 +899,7 @@ namespace UserConfigParams
                                                     "The server used for reporting statistics to."));
 
     PARAM_PREFIX BoolUserConfigParam      m_hw_report_enable
-            PARAM_DEFAULT( BoolUserConfigParam(   true,
+            PARAM_DEFAULT( BoolUserConfigParam(   false,
                                                      "hw-report-enabled",
                                                      &m_hw_report_group,
                                                     "If HW reports are enabled."));
@@ -980,7 +980,7 @@ namespace UserConfigParams
             "Whether to hide the GUI (artist debug mode)"));
 
     PARAM_PREFIX BoolUserConfigParam        m_everything_unlocked
-            PARAM_DEFAULT( BoolUserConfigParam(false, "everything_unlocked",
+            PARAM_DEFAULT( BoolUserConfigParam(true, "everything_unlocked",
                                "Enable all karts and tracks") );
 
     // TODO? implement blacklist for new irrlicht device and GUI
