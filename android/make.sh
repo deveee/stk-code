@@ -36,12 +36,12 @@ export HOST_AARCH64=aarch64-linux-android
 export NDK_PLATFORM_AARCH64=android-21
 export SDK_VERSION_AARCH64=21
 
-export APP_NAME_RELEASE="SuperTuxKart"
-export APP_NAME_DEBUG="SuperTuxKart Debug"
-export PACKAGE_NAME_RELEASE="org.supertuxkart.stk"
-export PACKAGE_NAME_DEBUG="org.supertuxkart.stk_dev"
+export APP_NAME_RELEASE="SimpleTuxKart"
+export APP_NAME_DEBUG="SimpleTuxKart Debug"
+export PACKAGE_NAME_RELEASE="org.deve.simpletuxkart"
+export PACKAGE_NAME_DEBUG="org.deve.simpletuxkart_dev"
 export APP_ICON_RELEASE="$DIRNAME/icon.png"
-export APP_ICON_DEBUG="$DIRNAME/icon-dbg.png"
+export APP_ICON_DEBUG="$DIRNAME/icon.png"
 
 
 # A helper function that checks if error ocurred
