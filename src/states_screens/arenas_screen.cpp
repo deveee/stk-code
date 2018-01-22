@@ -63,6 +63,7 @@ void ArenasScreen::beforeAddingWidget()
     RibbonWidget* tabs = this->getWidget<RibbonWidget>("trackgroups");
     assert( tabs != NULL );
 
+    tabs->setVisible(false);
     tabs->clearAllChildren();
 
     bool soccer_mode = race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER;

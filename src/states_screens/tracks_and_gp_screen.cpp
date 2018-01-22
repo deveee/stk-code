@@ -127,6 +127,7 @@ void TracksAndGPScreen::beforeAddingWidget()
 {
     Screen::init();
     RibbonWidget* tabs = getWidget<RibbonWidget>("trackgroups");
+    tabs->setVisible(false);
     tabs->clearAllChildren();
 
     const std::vector<std::string>& groups = track_manager->getAllTrackGroups();

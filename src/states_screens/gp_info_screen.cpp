@@ -127,32 +127,32 @@ GrandPrixData::GPReverseType GPInfoScreen::getReverse() const
 // ----------------------------------------------------------------------------
 void GPInfoScreen::beforeAddingWidget()
 {
-    bool random = m_gp.isRandomGP();
-    if (!random)
-    {
+    //~ bool random = m_gp.isRandomGP();
+    //~ if (!random)
+    //~ {
         // Check if there is a saved GP:
-        SavedGrandPrix* saved_gp = SavedGrandPrix::getSavedGP(
-            StateManager::get()->getActivePlayerProfile(0)->getUniqueID(),
-            m_gp.getId(),
-            race_manager->getMinorMode(),
-            race_manager->getNumLocalPlayers());
+        //~ SavedGrandPrix* saved_gp = SavedGrandPrix::getSavedGP(
+            //~ StateManager::get()->getActivePlayerProfile(0)->getUniqueID(),
+            //~ m_gp.getId(),
+            //~ race_manager->getMinorMode(),
+            //~ race_manager->getNumLocalPlayers());
             
-        int tracks = (int)m_gp.getTrackNames().size();
-        bool continue_visible = saved_gp && saved_gp->getNextTrack() > 0 &&
-                                            saved_gp->getNextTrack() < tracks;
+        //~ int tracks = (int)m_gp.getTrackNames().size();
+        //~ bool continue_visible = saved_gp && saved_gp->getNextTrack() > 0 &&
+                                            //~ saved_gp->getNextTrack() < tracks;
 
-        RibbonWidget* ribbonButtons = getWidget<RibbonWidget>("buttons");
-        int id_continue_button = ribbonButtons->findItemNamed("continue");
-        ribbonButtons->setItemVisible(id_continue_button, continue_visible);
-        ribbonButtons->setLabel(id_continue_button, _("Continue saved GP"));
-    }
-    else
-    {
-        RibbonWidget* ribbonButtons = getWidget<RibbonWidget>("buttons");
-        int id_continue_button = ribbonButtons->findItemNamed("continue");
-        ribbonButtons->setItemVisible(id_continue_button, true);
-        ribbonButtons->setLabel(id_continue_button, _("Reload"));
-    }
+        //~ RibbonWidget* ribbonButtons = getWidget<RibbonWidget>("buttons");
+        //~ int id_continue_button = ribbonButtons->findItemNamed("continue");
+        //~ ribbonButtons->setItemVisible(id_continue_button, continue_visible);
+        //~ ribbonButtons->setLabel(id_continue_button, _("Continue saved GP"));
+    //~ }
+    //~ else
+    //~ {
+        //~ RibbonWidget* ribbonButtons = getWidget<RibbonWidget>("buttons");
+        //~ int id_continue_button = ribbonButtons->findItemNamed("continue");
+        //~ ribbonButtons->setItemVisible(id_continue_button, true);
+        //~ ribbonButtons->setLabel(id_continue_button, _("Reload"));
+    //~ }
 }
 
 // ----------------------------------------------------------------------------
@@ -173,56 +173,56 @@ void GPInfoScreen::init()
     //~ m_group_spinner->setVisible(random);
 
 
-    if(random)
-    {
-        RibbonWidget *rb = getWidget<RibbonWidget>("buttons");
-        rb->setLabel(1,_(L"Reload") );
-        std::string restart = file_manager->getAsset(FileManager::GUI, "restart.png");
+    //~ if(random)
+    //~ {
+        //~ RibbonWidget *rb = getWidget<RibbonWidget>("buttons");
+        //~ rb->setLabel(1,_(L"Reload") );
+        //~ std::string restart = file_manager->getAsset(FileManager::GUI, "restart.png");
 
-        // We have to recreate the group spinner, but a new group might have
-        // been added or deleted since the last time this screen was shown.
-        const std::vector<std::string>& groups = track_manager->getAllTrackGroups();
-        m_group_names.clear();
-        m_group_names.push_back("all");
-        for (unsigned int i = 0; i < groups.size(); i++)
-            m_group_names.push_back(groups[i]);
-        m_group_spinner->clearLabels();
-        int index_standard=0;
-        for (unsigned int i = 0; i < m_group_names.size(); i++)
-        {
-            m_group_spinner->addLabel(_(m_group_names[i].c_str()));
-            if (m_group_names[i] == "standard")
-                index_standard = i + 1;
-        }
-        // Try to keep a previously selected group value
-        if(m_group_spinner->getValue() >= (int)groups.size())
-        {
-            m_group_spinner->setValue(index_standard);
-            m_group_name = "standard";
-        }
-        else
-            m_group_name = stringc(m_group_names[m_group_spinner->getValue()].c_str()).c_str();
+        //~ // We have to recreate the group spinner, but a new group might have
+        //~ // been added or deleted since the last time this screen was shown.
+        //~ const std::vector<std::string>& groups = track_manager->getAllTrackGroups();
+        //~ m_group_names.clear();
+        //~ m_group_names.push_back("all");
+        //~ for (unsigned int i = 0; i < groups.size(); i++)
+            //~ m_group_names.push_back(groups[i]);
+        //~ m_group_spinner->clearLabels();
+        //~ int index_standard=0;
+        //~ for (unsigned int i = 0; i < m_group_names.size(); i++)
+        //~ {
+            //~ m_group_spinner->addLabel(_(m_group_names[i].c_str()));
+            //~ if (m_group_names[i] == "standard")
+                //~ index_standard = i + 1;
+        //~ }
+        //~ // Try to keep a previously selected group value
+        //~ if(m_group_spinner->getValue() >= (int)groups.size())
+        //~ {
+            //~ m_group_spinner->setValue(index_standard);
+            //~ m_group_name = "standard";
+        //~ }
+        //~ else
+            //~ m_group_name = stringc(m_group_names[m_group_spinner->getValue()].c_str()).c_str();
 
-        m_max_num_tracks = getMaxNumTracks(m_group_name);
+        //~ m_max_num_tracks = getMaxNumTracks(m_group_name);
 
-        m_num_tracks_spinner->setMax(m_max_num_tracks);
-        if(m_num_tracks_spinner->getValue() > m_max_num_tracks ||
-            m_num_tracks_spinner->getValue() < 1)
-        {
-            m_num_tracks_spinner->setValue(m_max_num_tracks);
-        }
+        //~ m_num_tracks_spinner->setMax(m_max_num_tracks);
+        //~ if(m_num_tracks_spinner->getValue() > m_max_num_tracks ||
+            //~ m_num_tracks_spinner->getValue() < 1)
+        //~ {
+            //~ m_num_tracks_spinner->setValue(m_max_num_tracks);
+        //~ }
 
-        // Now create the random GP:
-        m_gp.createRandomGP(m_num_tracks_spinner->getValue(),
-                            m_group_name, getReverse(), true);
+        //~ // Now create the random GP:
+        //~ m_gp.createRandomGP(m_num_tracks_spinner->getValue(),
+                            //~ m_group_name, getReverse(), true);
 
-        getWidget<LabelWidget>("name")->setText(translations->fribidize(m_gp.getName()), false);
-    }
-    else
-    {
+        //~ getWidget<LabelWidget>("name")->setText(translations->fribidize(m_gp.getName()), false);
+    //~ }
+    //~ else
+    //~ {
         getWidget<LabelWidget>("name")->setText(translations->fribidize(m_gp.getName()), false);
         m_gp.checkConsistency();
-    }
+    //~ }
 
     // Number of AIs
     // -------------
@@ -253,7 +253,7 @@ void GPInfoScreen::init()
     addTracks();
     addScreenshot();
 
-    RibbonWidget* bt_start = getWidget<GUIEngine::RibbonWidget>("buttons");
+    ButtonWidget* bt_start = getWidget<GUIEngine::ButtonWidget>("start");
     bt_start->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
 }   // init
 
@@ -299,22 +299,22 @@ void GPInfoScreen::addScreenshot()
 void GPInfoScreen::eventCallback(Widget *, const std::string &name,
                                  const int player_id)
 {
-    if(name=="buttons")
+    if(name=="start")
     {
-        const std::string &button = getWidget<RibbonWidget>("buttons")
-                                  ->getSelectionIDString(PLAYER_ID_GAME_MASTER);
+        //~ const std::string &button = getWidget<RibbonWidget>("buttons")
+                                  //~ ->getSelectionIDString(PLAYER_ID_GAME_MASTER);
 
-        // The continue button becomes a 'reload' button in random GP:
-        if(button=="continue" && m_gp.isRandomGP())
-        {
-            // Create a new GP:
-            m_gp.createRandomGP(m_num_tracks_spinner->getValue(),
-                                m_group_name, getReverse(),
-                                /*new tracks*/ true );
-            addTracks();
-        }
-        else if (button == "start")
-        {
+        //~ // The continue button becomes a 'reload' button in random GP:
+        //~ if(button=="continue" && m_gp.isRandomGP())
+        //~ {
+            //~ // Create a new GP:
+            //~ m_gp.createRandomGP(m_num_tracks_spinner->getValue(),
+                                //~ m_group_name, getReverse(),
+                                //~ /*new tracks*/ true );
+            //~ addTracks();
+        //~ }
+        //~ else if (button == "start")
+        //~ {
             // Normal GP: start GP
             const int local_players = race_manager->getNumLocalPlayers();
             const bool has_AI = race_manager->hasAI();
@@ -325,13 +325,13 @@ void GPInfoScreen::eventCallback(Widget *, const std::string &name,
             
             m_gp.changeReverse(getReverse());
             race_manager->startGP(m_gp, false, false);
-        }
-        else if (button == "continue")
-        {
-            // Normal GP: continue a saved GP
-            m_gp.changeReverse(getReverse());
-            race_manager->startGP(m_gp, false, true);
-        }
+        //~ }
+        //~ else if (button == "continue")
+        //~ {
+            //~ // Normal GP: continue a saved GP
+            //~ m_gp.changeReverse(getReverse());
+            //~ race_manager->startGP(m_gp, false, true);
+        //~ }
     }   // name=="buttons"
     else if (name=="group-spinner")
     {

@@ -84,14 +84,6 @@ void TrackInfoScreen::loadedFromFile()
     GUIEngine::IconButtonWidget* screenshot = getWidget<IconButtonWidget>("screenshot");
     screenshot->setFocusable(false);
     screenshot->m_tab_stop = false;
-    
-    const int screen_height = irr_driver->getActualScreenSize().Height;
-    
-    if (screen_height <= 480)
-    {
-        RibbonWidget* bt_start = getWidget<GUIEngine::RibbonWidget>("buttons");
-        bt_start->setLabel(0, "");
-    }
 }   // loadedFromFile
 
 // ----------------------------------------------------------------------------
@@ -244,7 +236,7 @@ void TrackInfoScreen::init()
     m_highscore_entries[1]->setVisible(has_highscores);
     m_highscore_entries[2]->setVisible(has_highscores);
 
-    RibbonWidget* bt_start = getWidget<GUIEngine::RibbonWidget>("buttons");
+    ButtonWidget* bt_start = getWidget<GUIEngine::ButtonWidget>("start");
     bt_start->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
 
     updateHighScores();
@@ -368,14 +360,9 @@ void TrackInfoScreen::onEnterPressedInternal()
 void TrackInfoScreen::eventCallback(Widget* widget, const std::string& name,
                                    const int playerID)
 {
-    if (name == "buttons")
+    if (name == "start")
     {
-        const std::string &button = getWidget<GUIEngine::RibbonWidget>("buttons")
-                                  ->getSelectionIDString(PLAYER_ID_GAME_MASTER);
-        if(button=="start")
-            onEnterPressedInternal();
-        else if(button=="back")
-            StateManager::get()->escapePressed();
+        onEnterPressedInternal();
     }
     else if (name == "back")
     {
