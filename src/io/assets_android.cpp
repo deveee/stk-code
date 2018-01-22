@@ -73,22 +73,16 @@ void AssetsAndroid::init()
     paths.push_back("/sdcard/");
     paths.push_back("/storage/sdcard0/");
     paths.push_back("/storage/sdcard1/");
-    paths.push_back("/data/data/org.supertuxkart.stk/files/");
+    paths.push_back("/data/data/org.deve.simpletuxkart/files/");
 
     // Check if STK data for current version is available somewhere
     for (std::string path : paths)
     {
         Log::info("AssetsAndroid", "Check data files in: %s", path.c_str());
 
-        if (m_file_manager->fileExists(path + "/stk/data/" + version))
+        if (m_file_manager->fileExists(path + "/simpletuxkart/data/" + version))
         {
-            m_stk_dir = path + "/stk";
-            break;
-        }
-
-        if (m_file_manager->fileExists(path + "/supertuxkart/data/" + version))
-        {
-            m_stk_dir = path + "/supertuxkart";
+            m_stk_dir = path + "/simpletuxkart";
             break;
         }
     }
@@ -102,17 +96,10 @@ void AssetsAndroid::init()
         {
             Log::info("AssetsAndroid", "Check data files for different STK "
                                        "version in: %s", path.c_str());
-    
-            if (m_file_manager->fileExists(path + "/stk/.extracted"))
+
+            if (m_file_manager->fileExists(path + "/simpletuxkart/.extracted"))
             {
-                m_stk_dir = path + "/stk";
-                needs_extract_data = true;
-                break;
-            }
-    
-            if (m_file_manager->fileExists(path + "/supertuxkart/.extracted"))
-            {
-                m_stk_dir = path + "/supertuxkart";
+                m_stk_dir = path + "/simpletuxkart";
                 needs_extract_data = true;
                 break;
             }
@@ -133,11 +120,11 @@ void AssetsAndroid::init()
         if (preferred_path.length() > 0)
         {
             if (m_file_manager->checkAndCreateDirectoryP(preferred_path +
-                                                                "/stk/data"))
+                                                        "/simpletuxkart/data"))
             {
                 Log::info("AssetsAndroid", "Data directory created in: %s",
                           preferred_path.c_str());
-                m_stk_dir = preferred_path + "/stk";
+                m_stk_dir = preferred_path + "/simpletuxkart";
                 needs_extract_data = true;
             }
         }
@@ -149,11 +136,11 @@ void AssetsAndroid::init()
     {
         for (std::string path : paths)
         {
-            if (m_file_manager->checkAndCreateDirectoryP(path + "/stk/data"))
+            if (m_file_manager->checkAndCreateDirectoryP(path + "/simpletuxkart/data"))
             {
                 Log::info("AssetsAndroid", "Data directory created in: %s",
                           path.c_str());
-                m_stk_dir = path + "/stk";
+                m_stk_dir = path + "/simpletuxkart";
                 needs_extract_data = true;
                 break;
             }
@@ -417,8 +404,7 @@ void AssetsAndroid::removeData()
         return;
 
     // Make sure that we are not accidentally removing wrong directory
-    if (m_stk_dir.find("/stk") == std::string::npos &&
-        m_stk_dir.find("/supertuxkart") == std::string::npos)
+    if (m_stk_dir.find("/simpletuxkart") == std::string::npos)
     {
         Log::error("AssetsAndroid", "Invalid data directory: %s",
                    m_stk_dir.c_str());

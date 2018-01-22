@@ -20,11 +20,11 @@
 ################################################################################
 
 export KARTS="all"
-export TRACKS="abyss battleisland cave cornfield_crossing endcutscene        \
+export TRACKS="abyss battleisland cave cornfield_crossing        \
                featunlocked fortmagma gplose gpwin hacienda icy_soccer_field \
-               introcutscene introcutscene2 lighthouse mines olivermath      \
-               overworld sandtrack scotland snowmountain snowtuxpeak         \
-               soccer_field stadium tutorial zengarden"
+               lighthouse mines olivermath      \
+               sandtrack scotland snowmountain snowtuxpeak         \
+               soccer_field stadium zengarden"
 
 export ASSETS_PATHS="../data                    \
                      ../../stk-assets           \
