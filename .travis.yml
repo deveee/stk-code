@@ -47,6 +47,7 @@ before_script:
     else
         export THREADS=$((`nproc` + 1));
     fi'
+  - echo . | clang++ -dM -E -
   - echo "THREADS = $THREADS"
   - free -mt
 
