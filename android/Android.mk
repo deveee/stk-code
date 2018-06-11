@@ -145,7 +145,7 @@ LOCAL_CPP_FEATURES += rtti exceptions
 LOCAL_SRC_FILES    := $(wildcard ../src/*.cpp)     \
                       $(wildcard ../src/*/*.cpp)   \
                       $(wildcard ../src/*/*/*.cpp)
-LOCAL_LDLIBS       := -llog -landroid -lEGL -lGLESv3 -lOpenSLES
+LOCAL_LDLIBS       := -llog -landroid -lEGL -lGLESv2 -lOpenSLES
 LOCAL_CFLAGS       := -I../lib/angelscript/include      \
                       -I../lib/bullet/src               \
                       -I../lib/enet/include             \
