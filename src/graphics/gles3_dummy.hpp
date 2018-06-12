@@ -1,6 +1,8 @@
 #ifndef GL3_DUMMY_HPP
 #define GL3_DUMMY_HPP
 
+#ifdef USE_GLES2
+
 #include <GLES2/gl2.h>
 
 typedef unsigned short   GLhalf;
@@ -437,4 +439,5 @@ void glTexStorage2D (GLenum target, GLsizei levels, GLenum internalformat, GLsiz
 void glTexStorage3D (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
 void glGetInternalformativ (GLenum target, GLenum internalformat, GLenum pname, GLsizei bufSize, GLint *params);
 
+#endif
 #endif

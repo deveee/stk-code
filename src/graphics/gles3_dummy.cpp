@@ -1,5 +1,7 @@
 #include "gles3_dummy.hpp"
 
+#ifdef USE_GLES2
+
 void glReadBuffer (GLenum src) {};
 void glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices) {};
 void glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels) {};
@@ -104,3 +106,5 @@ void glInvalidateSubFramebuffer (GLenum target, GLsizei numAttachments, const GL
 void glTexStorage2D (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height) {};
 void glTexStorage3D (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth) {};
 void glGetInternalformativ (GLenum target, GLenum internalformat, GLenum pname, GLsizei bufSize, GLint *params) {};
+
+#endif
