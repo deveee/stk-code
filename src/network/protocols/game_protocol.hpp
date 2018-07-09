@@ -74,13 +74,15 @@ private:
     void handleItemEventConfirmation(Event *event);
     static std::weak_ptr<GameProtocol> m_game_protocol;
     std::map<STKPeer*, int> m_initial_ticks;
+    std::map<STKPeer*, double> m_last_adjustments;
 
 public:
              GameProtocol();
     virtual ~GameProtocol();
 
     virtual bool notifyEventAsynchronous(Event* event) OVERRIDE;
-    virtual void update(int ticks) OVERRIDE;
+    virtual void update(int ticks) OVERRIDE {}
+    void sendAllActions();
 
     void controllerAction(int kart_id, PlayerAction action,
                           int value, int val_l, int val_r);

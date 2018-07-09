@@ -202,6 +202,7 @@
 #include "io/file_manager.hpp"
 #include "items/attachment_manager.hpp"
 #include "items/item_manager.hpp"
+#include "items/powerup_manager.hpp"
 #include "items/projectile_manager.hpp"
 #include "karts/combined_characteristic.hpp"
 #include "karts/controller/ai_base_lap_controller.hpp"
@@ -596,6 +597,8 @@ void cmdLineHelp()
     "                          public port.\n"
     "       --login=s          Automatically log in (set the login).\n"
     "       --password=s       Automatically log in (set the password).\n"
+    "       --init-user        Save the above login and password (if set) in config.\n"
+    "       --disable-polling  Don't poll for logged in user.\n"
     "       --port=n           Port number to use.\n"
     "       --disable-lan      Disable LAN detection (connect using WAN).\n"
     "       --auto-connect     Automatically connect to fist server and start race\n"
@@ -1030,6 +1033,13 @@ int handleCmdLine()
         }
     }   // --type
 
+    bool init_user = CommandLine::has("--init-user");
+    if (init_user)
+    {
+        PlayerManager::get()->enforceCurrentPlayer();
+        PlayerManager::getCurrentPlayer()->setRememberPassword(true);
+        UserConfigParams::m_internet_status = Online::RequestManager::IPERM_ALLOWED;
+    }
     if (CommandLine::has("--login", &s))
         login = s.c_str();
     if (CommandLine::has("--password", &s))
@@ -1046,7 +1056,15 @@ int handleCmdLine()
             StkTime::sleep(1);
         }
         Log::info("Main", "Logged in from command-line.");
+        if (init_user)
+            PlayerManager::getCurrentPlayer()->setWasOnlineLastTime(true);
         can_wan = true;
+    }
+    if (init_user)
+    {
+        Log::info("Main", "Done saving user, leaving");
+        cleanSuperTuxKart();
+        return false;
     }
 
     if (!can_wan && CommandLine::has("--login-id", &n) &&
@@ -1115,7 +1133,8 @@ int handleCmdLine()
         NetworkConfig::get()->setServerIdFile(
             file_manager->getUserConfigFile(s));
     }
-
+    if(CommandLine::has("--disable-polling"))
+        Online::RequestManager::m_disable_polling = true;
     if(CommandLine::has("--max-players", &n))
         UserConfigParams::m_server_max_players=n;
     NetworkConfig::get()->
@@ -1663,12 +1682,12 @@ void askForInternetPermission()
             // than sorry). If internet should be allowed, the news
             // manager needs to be started (which in turn activates
             // the add-ons manager).
+#ifndef SERVER_ONLY
             bool need_to_start_news_manager =
                 UserConfigParams::m_internet_status !=
                                   Online::RequestManager::IPERM_ALLOWED;
             UserConfigParams::m_internet_status =
                                   Online::RequestManager::IPERM_ALLOWED;
-#ifndef SERVER_ONLY
             if (need_to_start_news_manager)
                 NewsManager::get()->init(false);
 #endif
@@ -1799,7 +1818,7 @@ int main(int argc, char *argv[] )
             material_manager->addSharedMaterial(materials_file);
         }
         Referee::init();
-        powerup_manager->loadAllPowerups();
+        powerup_manager->loadPowerupsModels();
         ItemManager::loadDefaultItemMeshes();
 
         GUIEngine::addLoadingIcon( irr_driver->getTexture(FileManager::GUI,
@@ -2232,6 +2251,8 @@ void runUnitTests()
     assert(!isEasterMode(21, 3, 2016, 5));
     UserConfigParams::m_easter_ear_mode = saved_easter_mode;
 
+    Log::info("UnitTest", "PowerupManager");
+    PowerupManager::unitTesting();
 
     Log::info("UnitTest", "Kart characteristics");
     CombinedCharacteristic::unitTesting();

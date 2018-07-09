@@ -57,7 +57,7 @@ digraph interaction {
 "REQUESTING_CONNECTION" -> "?? TO BE DONE ??" [label="Connection refused by server"]
 "CONNECTED" -> "KART_SELECTION" [label="Server tells us to start kart selection"]
 "KART_SELECTION" -> "SELECTING_KARTS" [label="Show kart selection screen"]
-"SELECTING_KARTS" -> "PLAYING" [label="Server sends start race message"]
+"SELECTING_KARTS" -> "RACING" [label="Server sends start race message"]
 }
 \enddot
 Note that some states are actually managed outside of the client lobby. For
@@ -313,14 +313,6 @@ void ClientLobby::update(int ticks)
         m_state.store(REQUESTING_CONNECTION);
     }
     break;
-    case REQUESTING_CONNECTION:
-        break;
-    case CONNECTED:
-        break;
-    case SELECTING_ASSETS:
-        break;
-    case PLAYING:
-        break;
     case RACE_FINISHED:
         if (!RaceEventManager::getInstance()->protocolStopped() ||
             !GameProtocol::emptyInstance())
@@ -332,6 +324,10 @@ void ClientLobby::update(int ticks)
         m_state.store(EXITING);
         requestTerminate();
         break;
+    case REQUESTING_CONNECTION:
+    case CONNECTED:
+    case SELECTING_ASSETS:
+    case RACING:
     case EXITING:
         break;
     }
@@ -552,19 +548,21 @@ void ClientLobby::updatePlayerList(Event* event)
     if (!checkDataSize(event, 1)) return;
     NetworkString& data = event->data();
     unsigned player_count = data.getUInt8();
-    std::vector<std::tuple<uint32_t, uint32_t, core::stringw, int> > players;
+    std::vector<std::tuple<uint32_t, uint32_t, uint32_t, core::stringw,
+        int> > players;
     for (unsigned i = 0; i < player_count; i++)
     {
-        std::tuple<uint32_t, uint32_t, core::stringw, int> pl;
+        std::tuple<uint32_t, uint32_t, uint32_t, core::stringw, int> pl;
         std::get<0>(pl) = data.getUInt32();
         std::get<1>(pl) = data.getUInt32();
-        data.decodeStringW(&std::get<2>(pl));
+        std::get<2>(pl) = data.getUInt8();
+        data.decodeStringW(&std::get<3>(pl));
         // icon to be used, see NetworkingLobby::loadedFromFile
-        std::get<3>(pl) = data.getUInt8() == 1 /*if server owner*/ ? 0 :
+        std::get<4>(pl) = data.getUInt8() == 1 /*if server owner*/ ? 0 :
             std::get<1>(pl) != 0 /*if online account*/ ? 1 : 2;
         PerPlayerDifficulty d = (PerPlayerDifficulty)data.getUInt8();
         if (d == PLAYER_DIFFICULTY_HANDICAP)
-            std::get<2>(pl) = _("%s (handicapped)", std::get<2>(pl));
+            std::get<3>(pl) = _("%s (handicapped)", std::get<3>(pl));
         players.push_back(pl);
     }
     NetworkingLobby::getInstance()->updatePlayers(players);
@@ -656,7 +654,7 @@ void ClientLobby::connectionRefused(Event* event)
  */
 void ClientLobby::startGame(Event* event)
 {
-    m_state.store(PLAYING);
+    m_state.store(RACING);
     // Triggers the world finite state machine to go from WAIT_FOR_SERVER_PHASE
     // to READY_PHASE.
     World::getWorld()->setReadyToRace();

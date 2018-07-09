@@ -40,6 +40,8 @@ KartRewinder::KartRewinder(const std::string& ident,unsigned int world_kart_id,
             , Kart(ident, world_kart_id, position, init_transform, difficulty,
                    ri)
 {
+    m_steering_smoothing_dt = -1.0f;
+    m_prev_steering = m_steering_smoothing_time = 0.0f;
 }   // KartRewinder
 
 // ----------------------------------------------------------------------------
@@ -59,40 +61,32 @@ void KartRewinder::reset()
  */
 void KartRewinder::saveTransform()
 {
-    m_saved_transform = getTrans();
-    m_rewound_transforms.clear();
+    if (!getKartAnimation())
+    {
+        Moveable::prepareSmoothing();
+        m_skidding->prepareSmoothing();
+    }
+
+    m_prev_steering = getSteerPercent();
 }   // saveTransform
 
 // ----------------------------------------------------------------------------
 void KartRewinder::computeError()
 {
-    // Local player kart doesn't need showing in the past
-    if (m_rewound_transforms.empty())
-        return;
-
-    std::deque<btTransform> copied = m_rewound_transforms;
-    // Find the closest position that matches previous rewound one
-    Vec3 saved_position = m_saved_transform.getOrigin();
-    while (!copied.empty())
+    if (!getKartAnimation())
     {
-        Vec3 cur_position = copied.front().getOrigin();
-        if ((cur_position - saved_position).length() < 0.25f)
-        {
-            setTrans(copied.front());
-            copied.pop_front();
-            std::swap(m_rewound_transforms, copied);
-            return;
-        }
-        copied.pop_front();
+        Moveable::checkSmoothing();
+        m_skidding->checkSmoothing();
     }
 
-    // Use newly rewound one if no matching transformation
-    setTrans(m_rewound_transforms.front());
-    m_rewound_transforms.pop_front();
-    //btTransform error = getTrans() - m_saved_transform;
-    //Vec3 pos_error = getTrans().getOrigin() - m_saved_transform.getOrigin();
-    //btQuaternion rot_error(0, 0, 0, 1);
-    //Kart::addError(pos_error, rot_error);
+    float diff = fabsf(m_prev_steering - AbstractKart::getSteerPercent());
+    if (diff > 0.05f)
+    {
+        m_steering_smoothing_time = getTimeFullSteer(diff) / 2.0f;
+        m_steering_smoothing_dt = 0.0f;
+    }
+    else
+        m_steering_smoothing_dt = -1.0f;
 }   // computeError
 
 // ----------------------------------------------------------------------------
@@ -133,7 +127,7 @@ BareNetworkString* KartRewinder::saveState()
     // -----------------------------
     getAttachment()->saveState(buffer);
     getPowerup()->saveState(buffer);
-    buffer->addFloat(getEnergy());
+    buffer->addUInt8(m_min_nitro_ticks).addFloat(getEnergy());
 
     // 4) Max speed info
     // ------------------
@@ -160,15 +154,22 @@ void KartRewinder::restoreState(BareNetworkString *buffer, int count)
     t.setOrigin(buffer->getVec3());
     t.setRotation(buffer->getQuat());
     btRigidBody *body = getBody();
-    body->setLinearVelocity(buffer->getVec3());
-    body->setAngularVelocity(buffer->getVec3());
+    Vec3 lv = buffer->getVec3();
+    Vec3 av = buffer->getVec3();
 
-    // This function also reads the velocity, so it must be called
-    // after the velocities are set
-    body->proceedToTransform(t);
-    // Update kart transform in case that there are access to its value
-    // before Moveable::update() is called (which updates the transform)
-    setTrans(t);
+    // Don't restore to phyics position if showing kart animation
+    if (!getKartAnimation())
+    {
+        body->setLinearVelocity(lv);
+        body->setAngularVelocity(av);
+        // This function also reads the velocity, so it must be called
+        // after the velocities are set
+        body->proceedToTransform(t);
+        // Update kart transform in case that there are access to its value
+        // before Moveable::update() is called (which updates the transform)
+        setTrans(t);
+    }
+
     m_has_started = buffer->getUInt8()!=0;   // necessary for startup speed boost
     m_vehicle->setMinSpeed(buffer->getFloat());
     float time_rot = buffer->getFloat();
@@ -191,6 +192,7 @@ void KartRewinder::restoreState(BareNetworkString *buffer, int count)
     // ------------------------------
     getAttachment()->rewindTo(buffer);
     getPowerup()->rewindTo(buffer);
+    m_min_nitro_ticks = buffer->getUInt8();
     float nitro = buffer->getFloat();
     setEnergy(nitro);
 

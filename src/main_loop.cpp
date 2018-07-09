@@ -26,10 +26,13 @@
 #include "guiengine/engine.hpp"
 #include "guiengine/message_queue.hpp"
 #include "guiengine/modaldialog.hpp"
+#include "karts/controller/local_player_controller.hpp"
+#include "karts/abstract_kart.hpp"
 #include "input/input_manager.hpp"
 #include "modes/profile_world.hpp"
 #include "modes/world.hpp"
 #include "network/network_config.hpp"
+#include "network/protocols/game_protocol.hpp"
 #include "network/protocol_manager.hpp"
 #include "network/race_event_manager.hpp"
 #include "network/rewind_manager.hpp"
@@ -46,14 +49,26 @@
 
 MainLoop* main_loop = 0;
 
+#ifdef WIN32
+LRESULT CALLBACK separateProcessProc(_In_ HWND hwnd, _In_ UINT uMsg, 
+                                     _In_ WPARAM wParam, _In_ LPARAM lParam)
+{
+    if (uMsg == WM_DESTROY)
+    {
+        PostQuitMessage(0);
+        return 0;
+    }
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+};
+#endif
+
 // ----------------------------------------------------------------------------
 MainLoop::MainLoop(unsigned parent_pid)
-        : m_abort(false), m_parent_pid(parent_pid)
+        : m_abort(false), m_ticks_adjustment(0), m_parent_pid(parent_pid)
 {
     m_curr_time       = 0;
     m_prev_time       = 0;
     m_throttle_fps    = true;
-    m_is_last_substep = false;
     m_frame_before_loading_world = false;
 #ifdef WIN32
     if (parent_pid != 0)
@@ -62,15 +77,7 @@ MainLoop::MainLoop(unsigned parent_pid)
         class_name += StringUtils::toString(GetCurrentProcessId());
         WNDCLASSEX wx = {};
         wx.cbSize = sizeof(WNDCLASSEX);
-        wx.lpfnWndProc = [](HWND h, UINT m, WPARAM w, LPARAM l)->LRESULT
-        {
-            if (m == WM_DESTROY)
-            {
-                PostQuitMessage(0);
-                return 0;
-            }
-            return DefWindowProc(h, m, w, l);
-        };
+        wx.lpfnWndProc = separateProcessProc;
         wx.hInstance = GetModuleHandle(0);
         wx.lpszClassName = &class_name[0];
         if (RegisterClassEx(&wx))
@@ -180,16 +187,6 @@ float MainLoop::getLimitedDt()
     }   // while(1)
 
     dt *= 0.001f;
-
-    // If this is a client, the server might request an adjustment of
-    // this client's world clock (to reduce number of rewinds).
-    if (World::getWorld()                   &&
-        NetworkConfig::get()->isClient()    &&
-        !RewindManager::get()->isRewinding()   )
-    {
-        dt = World::getWorld()->adjustDT(dt);
-    }
-
     return dt;
 }   // getLimitedDt
 
@@ -322,11 +319,11 @@ void MainLoop::run()
         if (m_parent_pid != 0 && getppid() != (int)m_parent_pid)
             m_abort = true;
 #endif
-        m_is_last_substep = false;
         PROFILER_PUSH_CPU_MARKER("Main loop", 0xFF, 0x00, 0xF7);
 
         left_over_time += getLimitedDt();
         int num_steps   = stk_config->time2Ticks(left_over_time);
+
         float dt = stk_config->ticks2Time(1);
         left_over_time -= num_steps * dt ;
 
@@ -388,11 +385,34 @@ void MainLoop::run()
             PROFILER_POP_CPU_MARKER();
         }
 
-        for(int i=0; i<num_steps; i++)
+        m_ticks_adjustment.lock();
+        if (m_ticks_adjustment.getData() != 0)
         {
-            // Enable last substep in last iteration
-            m_is_last_substep = (i == num_steps - 1);
+            if (m_ticks_adjustment.getData() > 0)
+            {
+                num_steps += m_ticks_adjustment.getData();
+                m_ticks_adjustment.getData() = 0;
+            }
+            else if (m_ticks_adjustment.getData() < 0)
+            {
+                int new_steps = num_steps + m_ticks_adjustment.getData();
+                if (new_steps < 0)
+                {
+                    num_steps = 0;
+                    m_ticks_adjustment.getData() = new_steps;
+                }
+                else
+                {
+                    num_steps = new_steps;
+                    m_ticks_adjustment.getData() = 0;
+                }
+            }
+        }
+        m_ticks_adjustment.unlock();
 
+        double time_spent = StkTime::getRealTime();
+        for(int i = 0; i < num_steps; i++)
+        {
             PROFILER_PUSH_CPU_MARKER("Update race", 0, 255, 255);
             if (World::getWorld()) updateRace(1);
             PROFILER_POP_CPU_MARKER();
@@ -412,6 +432,7 @@ void MainLoop::run()
 
             if (m_frame_before_loading_world)
             {
+                time_spent = StkTime::getRealTime();
                 m_frame_before_loading_world = false;
                 break;
             }
@@ -427,7 +448,21 @@ void MainLoop::run()
             }
         }   // for i < num_steps
 
-        m_is_last_substep = false;
+        time_spent = StkTime::getRealTime() - time_spent;
+        // Handle buffered player actions
+        if (World::getWorld())
+        {
+            for (unsigned i = 0; i < World::getWorld()->getNumKarts(); i++)
+            {
+                LocalPlayerController* lpc =
+                    dynamic_cast<LocalPlayerController*>
+                    (World::getWorld()->getKart(i)->getController());
+                if (lpc)
+                    lpc->handleBufferedActions(time_spent);
+            }
+            if (auto gp = GameProtocol::lock())
+                gp->sendAllActions();
+        }
         PROFILER_POP_CPU_MARKER();   // MainLoop pop
         PROFILER_SYNC_FRAME();
     }  // while !m_abort

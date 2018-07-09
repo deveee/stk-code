@@ -260,8 +260,8 @@ void RewindQueue::mergeNetworkData(int world_ticks, bool *needs_rewind,
         // any server message should be in the client's past - but it can
         // happen during debugging) we need to rewind to getTicks (in order
         // to get the latest state).
-        if (NetworkConfig::get()->isClient() && (*i)->getTicks() <= world_ticks
-            && (*i)->isState())
+        if (NetworkConfig::get()->isClient() &&
+            (*i)->getTicks() <= world_ticks && (*i)->isState())
         {
             // We need rewind if we receive an event in the past. This will
             // then trigger a rewind later. Note that we only rewind to the

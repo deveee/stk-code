@@ -31,6 +31,7 @@
 StoryModeStatus::StoryModeStatus(const XMLNode *node)
 {
     m_points             = 0;
+    m_points_before      = 0;
     m_next_unlock_points = 0;
     m_first_time         = true;
     m_easy_challenges    = 0;
@@ -44,7 +45,6 @@ StoryModeStatus::StoryModeStatus(const XMLNode *node)
     {
         node->get("first-time", &m_first_time);
     }   // if node
-
 }   // StoryModeStatus
 
 //-----------------------------------------------------------------------------
@@ -77,8 +77,9 @@ bool StoryModeStatus::isLocked(const std::string& feature)
 }  // featureIsLocked
 
 //-----------------------------------------------------------------------------
-void StoryModeStatus::computeActive()
+void StoryModeStatus::computeActive(bool first_call)
 {
+    int old_points = m_points;
     m_points = 0;
     m_next_unlock_points = 0;
     m_easy_challenges = 0;
@@ -96,8 +97,8 @@ void StoryModeStatus::computeActive()
         // -----------------
         if((i->second)->isSolvedAtAnyDifficulty())
         {
-            // The constructor calls computeActive, which actually locks
-            // all features, so unlock the solved ones (and don't try to
+            // computeActive is called in createStoryModeStatus, which actually
+            // locks all features, so unlock the solved ones (and don't try to
             // save the state, since we are currently reading it)
 
             if (i->second->isSolved(RaceManager::DIFFICULTY_EASY))
@@ -181,6 +182,11 @@ void StoryModeStatus::computeActive()
     }   // for i
 
     // now we have the number of points.
+
+    // Update the previous number of points
+    // On game launch, set it to the number of points the player has
+    if (old_points != m_points)
+        m_points_before = (first_call) ? m_points : old_points;
 
     unlockFeatureByList();
 
