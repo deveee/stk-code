@@ -23,6 +23,7 @@
 #include "config/player_manager.hpp"
 #include "guiengine/modaldialog.hpp"
 #include "guiengine/message_queue.hpp"
+#include "guiengine/screen_keyboard.hpp"
 #include "input/device_manager.hpp"
 #include "karts/kart_properties_manager.hpp"
 #include "modes/linear_world.hpp"
@@ -242,6 +243,8 @@ void ClientLobby::addAllPlayers(Event* event)
     }
     configRemoteKart(players);
     loadWorld();
+    // Switch to assign mode in case a player hasn't chosen any karts
+    input_manager->getDeviceManager()->setAssignMode(ASSIGN);
 }   // addAllPlayers
 
 //-----------------------------------------------------------------------------
@@ -709,6 +712,7 @@ void ClientLobby::startSelection(Event* event)
 
     // In case the user opened a user info dialog
     GUIEngine::ModalDialog::dismiss();
+    GUIEngine::ScreenKeyboard::dismiss();
     NetworkKartSelectionScreen* screen =
         NetworkKartSelectionScreen::getInstance();
     screen->setAvailableKartsFromServer(m_available_karts);
