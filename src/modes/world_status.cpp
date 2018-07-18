@@ -324,15 +324,6 @@ void WorldStatus::updateTime(int ticks)
             {
                 // set phase is over, go to the next one
                 m_phase = GO_PHASE;
-                // Save one initial state on a client, in case that an event
-                // is received from a client (trieggering a rollback) before
-                // a state from the server has been received.
-                if (NetworkConfig::get()->isNetworking() &&  
-                    NetworkConfig::get()->isClient()        )
-                {
-                    RewindManager::get()->saveLocalState();
-                    // FIXME TODO: save state in rewind queue!
-                }
                 if (m_play_ready_set_go_sounds)
                 {
                     m_start_sound->play();
@@ -461,7 +452,7 @@ void WorldStatus::updateTime(int ticks)
                 m_count_up_ticks++;
             }
 
-            if(m_time_ticks <= 0.0)
+            if (m_time_ticks <= 0)
             {
                 // event
                 countdownReachedZero();
@@ -507,6 +498,23 @@ void WorldStatus::setTicks(int ticks)
     m_time_ticks = ticks;
     m_time = stk_config->ticks2Time(ticks);
 }   // setTicks
+
+//-----------------------------------------------------------------------------
+/** Sets a new time for the world time (used by rewind), measured in ticks.
+ *  \param ticks New time in ticks to set (always count upwards).
+ */
+void WorldStatus::setTicksForRewind(int ticks)
+{
+    m_count_up_ticks = ticks;
+    if (race_manager->hasTimeTarget())
+    {
+        m_time_ticks = stk_config->time2Ticks(race_manager->getTimeTarget()) -
+            m_count_up_ticks;
+    }
+    else
+        m_time_ticks = ticks;
+    m_time = stk_config->ticks2Time(m_time_ticks);
+}   // setTicksForRewind
 
 //-----------------------------------------------------------------------------
 /** Pauses the game and switches to the specified phase.

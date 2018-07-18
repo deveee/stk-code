@@ -25,6 +25,7 @@
 #include "guiengine/message_queue.hpp"
 #include "guiengine/screen_keyboard.hpp"
 #include "input/device_manager.hpp"
+#include "items/item_manager.hpp"
 #include "karts/kart_properties_manager.hpp"
 #include "modes/linear_world.hpp"
 #include "network/crypto.hpp"
@@ -232,8 +233,9 @@ void ClientLobby::addAllPlayers(Event* event)
         uint32_t online_id = data.getUInt32();
         PerPlayerDifficulty ppd = (PerPlayerDifficulty)data.getUInt8();
         uint8_t local_id = data.getUInt8();
+        SoccerTeam team = (SoccerTeam)data.getUInt8();
         auto player = std::make_shared<NetworkPlayerProfile>(peer, player_name,
-            host_id, kart_color, online_id, ppd, local_id);
+            host_id, kart_color, online_id, ppd, local_id, team);
         std::string kart_name;
         data.decodeString(&kart_name);
         player->setKartName(kart_name);
@@ -241,6 +243,8 @@ void ClientLobby::addAllPlayers(Event* event)
         m_game_setup->addPlayer(player);
         players.push_back(player);
     }
+    uint32_t random_seed = data.getUInt32();
+    ItemManager::updateRandomSeed(random_seed);
     configRemoteKart(players);
     loadWorld();
     // Switch to assign mode in case a player hasn't chosen any karts
@@ -321,7 +325,13 @@ void ClientLobby::update(int ticks)
             !GameProtocol::emptyInstance())
             return;
         if (!m_received_server_result)
+        {
             m_received_server_result = true;
+            // In case someone opened paused race dialog or menu in network game
+            GUIEngine::ModalDialog::dismiss();
+            if (StateManager::get()->getGameState() == GUIEngine::INGAME_MENU)
+                StateManager::get()->enterGameState();
+        }
         break;
     case DONE:
         m_state.store(EXITING);
@@ -401,9 +411,36 @@ void ClientLobby::displayPlayerVote(Event* event)
     int rev = data.getUInt8();
     core::stringw yes = _("Yes");
     core::stringw no = _("No");
-    //I18N: Vote message in network game from a player
-    core::stringw vote_msg = _("Track: %s,\nlaps: %d, reversed: %s",
-        track_readable, lap, rev == 1 ? yes : no);
+    core::stringw vote_msg;
+    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_3_STRIKES)
+    {
+        //I18N: Vote message in network game from a player
+        vote_msg = _("Track: %s,\nrandom item location: %s",
+            track_readable, rev == 1 ? yes : no);
+    }
+    else if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
+    {
+        if (m_game_setup->isSoccerGoalTarget())
+        {
+            //I18N: Vote message in network game from a player
+            vote_msg = _("Track: %s,\n"
+                "number of goals to win: %d,\nrandom item location: %s",
+                track_readable, lap, rev == 1 ? yes : no);
+        }
+        else
+        {
+            //I18N: Vote message in network game from a player
+            vote_msg = _("Track: %s,\n"
+                "maximum time: %d,\nrandom item location: %s",
+                track_readable, lap, rev == 1 ? yes : no);
+        }
+    }
+    else
+    {
+        //I18N: Vote message in network game from a player
+        vote_msg = _("Track: %s,\nlaps: %d, reversed: %s",
+            track_readable, lap, rev == 1 ? yes : no);
+    }
     vote_msg = StringUtils::utf8ToWide(player_name) + vote_msg;
     TracksScreen::getInstance()->addVoteMessage(player_name +
         StringUtils::toString(host_id), vote_msg);
@@ -552,10 +589,11 @@ void ClientLobby::updatePlayerList(Event* event)
     NetworkString& data = event->data();
     unsigned player_count = data.getUInt8();
     std::vector<std::tuple<uint32_t, uint32_t, uint32_t, core::stringw,
-        int> > players;
+        int, SoccerTeam> > players;
     for (unsigned i = 0; i < player_count; i++)
     {
-        std::tuple<uint32_t, uint32_t, uint32_t, core::stringw, int> pl;
+        std::tuple<uint32_t, uint32_t, uint32_t, core::stringw, int,
+            SoccerTeam> pl;
         std::get<0>(pl) = data.getUInt32();
         std::get<1>(pl) = data.getUInt32();
         std::get<2>(pl) = data.getUInt8();
@@ -566,6 +604,7 @@ void ClientLobby::updatePlayerList(Event* event)
         PerPlayerDifficulty d = (PerPlayerDifficulty)data.getUInt8();
         if (d == PLAYER_DIFFICULTY_HANDICAP)
             std::get<3>(pl) = _("%s (handicapped)", std::get<3>(pl));
+        std::get<5>(pl) = (SoccerTeam)data.getUInt8();
         players.push_back(pl);
     }
     NetworkingLobby::getInstance()->updatePlayers(players);

@@ -69,6 +69,7 @@
 #include "states_screens/state_manager.hpp"
 #include "tracks/track.hpp"
 #include "tracks/track_manager.hpp"
+#include "tracks/track_object_manager.hpp"
 #include "utils/constants.hpp"
 #include "utils/profiler.hpp"
 #include "utils/translation.hpp"
@@ -542,6 +543,10 @@ void World::onGo()
         if (m_karts[i]->isGhostKart()) continue;
         m_karts[i]->getVehicle()->setAllBrakes(0);
     }
+    // Reset track objects 1 more time to make sure all instances of moveable
+    // fall at the same instant when race start in network
+    if (NetworkConfig::get()->isNetworking())
+        Track::getCurrentTrack()->getTrackObjectManager()->reset();
 }   // onGo
 
 //-----------------------------------------------------------------------------
@@ -663,8 +668,6 @@ void World::terminateRace()
         results->clearHighscores();
     }
 
-    // In case someone opened paused race dialog in network game
-    GUIEngine::ModalDialog::dismiss();
     results->push();
     WorldStatus::terminateRace();
 }   // terminateRace
@@ -869,8 +872,9 @@ void World::updateWorld(int ticks)
     }
 
     // Don't update world if a menu is shown or the race is over.
-    if( getPhase() == FINISH_PHASE         ||
-        getPhase() == IN_GAME_MENU_PHASE      )
+    if (getPhase() == FINISH_PHASE ||
+        (!NetworkConfig::get()->isNetworking() &&
+        getPhase() == IN_GAME_MENU_PHASE))
         return;
 
     try
@@ -1030,6 +1034,10 @@ void World::update(int ticks)
     PROFILER_POP_CPU_MARKER();
     PROFILER_PUSH_CPU_MARKER("World::update (RewindManager)", 0x20, 0x7F, 0x40);
     RewindManager::get()->update(ticks);
+    PROFILER_POP_CPU_MARKER();
+
+    PROFILER_PUSH_CPU_MARKER("World::update (Track object manager)", 0x20, 0x7F, 0x40);
+    Track::getCurrentTrack()->getTrackObjectManager()->update(stk_config->ticks2Time(ticks));
     PROFILER_POP_CPU_MARKER();
 
     PROFILER_PUSH_CPU_MARKER("World::update (Kart::upate)", 0x40, 0x7F, 0x00);

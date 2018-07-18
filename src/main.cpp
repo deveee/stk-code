@@ -606,6 +606,11 @@ void cmdLineHelp()
     "       --motd             Message showing in all lobby of clients, can specify a .txt file.\n"
     "       --auto-end         Automatically end network game after 1st player finished\n"
     "                          for some time (currently his finished time * 0.25 + 15.0). \n"
+    "       --team-choosing    Allow choosing team in lobby, implicitly allowed in lan or\n"
+    "                          password protected server.\n"
+    "       --soccer-timed     Use time limit mode in network soccer game.\n"
+    "       --soccer-goals     Use goals limit mode in network soccer game.\n"
+    "       --network-gp=n     Specify number of tracks used in network grand prix.\n"
     "       --no-validation    Allow non validated and unencrypted connection in wan.\n"
     "       --ranked           Server will submit ranking to stk addons server.\n"
     "                          You require permission for that.\n"
@@ -948,7 +953,7 @@ int handleCmdLine()
         UserConfigParams::m_arena_ai_stats=true;
         race_manager->setMinorMode(RaceManager::MINOR_MODE_SOCCER);
         std::vector<std::string> l;
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < 8; i++)
             l.push_back("tux");
         race_manager->setDefaultAIKartList(l);
         race_manager->setNumKarts(9);
@@ -1087,6 +1092,7 @@ int handleCmdLine()
     {
         server_password = s;
         NetworkConfig::get()->setPassword(server_password);
+        NetworkConfig::get()->setTeamChoosing(true);
     }
 
     if (CommandLine::has("--motd", &s))
@@ -1149,6 +1155,10 @@ int handleCmdLine()
     if (CommandLine::has("--public-server"))
     {
         NetworkConfig::get()->setIsPublicServer();
+    }
+    if (CommandLine::has("--team-choosing"))
+    {
+        NetworkConfig::get()->setTeamChoosing(true);
     }
     if (CommandLine::has("--connect-now", &s))
     {
@@ -1222,6 +1232,7 @@ int handleCmdLine()
         NetworkConfig::get()->setServerName(StringUtils::xmlDecode(s));
         NetworkConfig::get()->setIsServer(true);
         NetworkConfig::get()->setIsLAN();
+        NetworkConfig::get()->setTeamChoosing(true);
         NetworkConfig::get()->setValidatedPlayers(false);
         server_lobby = STKHost::create();
         Log::info("main", "Creating a LAN server '%s'.", s.c_str());
@@ -1231,30 +1242,35 @@ int handleCmdLine()
         NetworkConfig::get()->setAutoConnect(true);
     }
 
-    if (CommandLine::has("--extra-server-info", &n))
+    const bool is_soccer =
+        race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER;
+    if (CommandLine::has("--soccer-timed") && is_soccer)
     {
-        if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
-        {
-            LobbyProtocol::get<LobbyProtocol>()->getGameSetup()
-                ->setSoccerGoalTarget(n != 0);
-            NetworkConfig::get()->setServerMode(
-                race_manager->getMinorMode(),
-                RaceManager::MAJOR_MODE_SINGLE);
-        }
-        else
-        {
-            LobbyProtocol::get<LobbyProtocol>()->getGameSetup()
-                ->setGrandPrixTrack(n);
-            NetworkConfig::get()->setServerMode(
-                race_manager->getMinorMode(),
-                RaceManager::MAJOR_MODE_GRAND_PRIX);
-        }
+        LobbyProtocol::get<LobbyProtocol>()->getGameSetup()
+                ->setSoccerGoalTarget(false);
+        NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
+            RaceManager::MAJOR_MODE_SINGLE);
+    }
+    else if (CommandLine::has("--soccer-goals") && is_soccer)
+    {
+        LobbyProtocol::get<LobbyProtocol>()->getGameSetup()
+                ->setSoccerGoalTarget(true);
+        NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
+            RaceManager::MAJOR_MODE_SINGLE);
+    }
+    else if (CommandLine::has("--network-gp", &n))
+    {
+        LobbyProtocol::get<LobbyProtocol>()->getGameSetup()
+            ->setGrandPrixTrack(n);
+        NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
+            RaceManager::MAJOR_MODE_GRAND_PRIX);
     }
     else
     {
         NetworkConfig::get()->setServerMode(
             race_manager->getMinorMode(), RaceManager::MAJOR_MODE_SINGLE);
     }
+
     // The extra server info has to be set before server lobby started
     if (server_lobby)
         server_lobby->requestStart();
@@ -1332,21 +1348,6 @@ int handleCmdLine()
         else
             race_manager->setDifficulty(RaceManager::Difficulty(n));
     }   // --mode
-
-    if(CommandLine::has("--type", &n))
-    {
-        switch (n)
-        {
-        case 0: race_manager->setMinorMode(RaceManager::MINOR_MODE_NORMAL_RACE);
-                break;
-        case 1: race_manager->setMinorMode(RaceManager::MINOR_MODE_TIME_TRIAL);
-                break;
-        case 2: race_manager->setMinorMode(RaceManager::MINOR_MODE_FOLLOW_LEADER);
-                break;
-        default:
-                Log::warn("main", "Invalid race type '%d' - ignored.", n);
-        }
-    }   // --type
 
     if(CommandLine::has("--track", &s) || CommandLine::has("-t", &s))
     {

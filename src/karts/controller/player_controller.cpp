@@ -328,13 +328,6 @@ void PlayerController::update(int ticks)
 {
     steer(ticks, m_steer_val);
 
-    if (World::getWorld()->getPhase() == World::GOAL_PHASE)
-    {
-        m_controls->setBrake(false);
-        m_controls->setAccel(0.0f);
-        return;
-    }
-
     if (World::getWorld()->isStartPhase())
     {
         if (m_controls->getAccel() || m_controls->getBrake()||
@@ -388,9 +381,8 @@ void PlayerController::saveState(BareNetworkString *buffer) const
 {
     // NOTE: when the size changes, the AIBaseController::saveState and
     // restore state MUST be adjusted!!
-    buffer->addUInt32(m_steer_val).addUInt32(m_steer_val_l)
-           .addUInt32(m_steer_val_r).addUInt8(m_prev_brake)
-           .addUInt32(m_prev_accel);
+    buffer->addUInt32(m_steer_val).addUInt32(m_prev_accel)
+        .addUInt8(m_prev_brake);
 }   // copyToBuffer
 
 //-----------------------------------------------------------------------------
@@ -398,11 +390,9 @@ void PlayerController::rewindTo(BareNetworkString *buffer)
 {
     // NOTE: when the size changes, the AIBaseController::saveState and
     // restore state MUST be adjusted!!
-    m_steer_val   = buffer->getUInt32();
-    m_steer_val_l = buffer->getUInt32();
-    m_steer_val_r = buffer->getUInt32();
-    m_prev_brake  = buffer->getUInt8();
-    m_prev_accel  = buffer->getUInt32();
+    m_steer_val  = buffer->getUInt32();
+    m_prev_accel = buffer->getUInt32();
+    m_prev_brake = buffer->getUInt8();
 }   // rewindTo
 
 // ----------------------------------------------------------------------------

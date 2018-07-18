@@ -26,8 +26,6 @@
 #include "guiengine/engine.hpp"
 #include "guiengine/message_queue.hpp"
 #include "guiengine/modaldialog.hpp"
-#include "karts/controller/local_player_controller.hpp"
-#include "karts/abstract_kart.hpp"
 #include "input/input_manager.hpp"
 #include "modes/profile_world.hpp"
 #include "modes/world.hpp"
@@ -374,7 +372,7 @@ void MainLoop::run()
                 GUIEngine::update(frame_duration);
                 PROFILER_POP_CPU_MARKER();
                 if (World::getWorld() && history->replayHistory())
-                    history->updateReplay(World::getWorld()->getTimeTicks());
+                    history->updateReplay(World::getWorld()->getTicksSinceStart());
                 PROFILER_PUSH_CPU_MARKER("Music", 0x7F, 0x00, 0x00);
                 SFXManager::get()->update();
                 PROFILER_POP_CPU_MARKER();
@@ -410,9 +408,16 @@ void MainLoop::run()
         }
         m_ticks_adjustment.unlock();
 
-        double time_spent = StkTime::getRealTime();
-        for(int i = 0; i < num_steps; i++)
+        for (int i = 0; i < num_steps; i++)
         {
+            PROFILER_PUSH_CPU_MARKER("Protocol manager update",
+                                     0x7F, 0x00, 0x7F);
+            if (auto pm = ProtocolManager::lock())
+            {
+                pm->update(1);
+            }
+            PROFILER_POP_CPU_MARKER();
+
             PROFILER_PUSH_CPU_MARKER("Update race", 0, 255, 255);
             if (World::getWorld()) updateRace(1);
             PROFILER_POP_CPU_MARKER();
@@ -422,17 +427,8 @@ void MainLoop::run()
             // since the GUI engine is no more to be called then.
             if (m_abort) break;
 
-            PROFILER_PUSH_CPU_MARKER("Protocol manager update",
-                                     0x7F, 0x00, 0x7F);
-            if (auto pm = ProtocolManager::lock())
-            {
-                pm->update(1);
-            }
-            PROFILER_POP_CPU_MARKER();
-
             if (m_frame_before_loading_world)
             {
-                time_spent = StkTime::getRealTime();
                 m_frame_before_loading_world = false;
                 break;
             }
@@ -447,22 +443,6 @@ void MainLoop::run()
                 World::getWorld()->updateTime(1);
             }
         }   // for i < num_steps
-
-        time_spent = StkTime::getRealTime() - time_spent;
-        // Handle buffered player actions
-        if (World::getWorld())
-        {
-            for (unsigned i = 0; i < World::getWorld()->getNumKarts(); i++)
-            {
-                LocalPlayerController* lpc =
-                    dynamic_cast<LocalPlayerController*>
-                    (World::getWorld()->getKart(i)->getController());
-                if (lpc)
-                    lpc->handleBufferedActions(time_spent);
-            }
-            if (auto gp = GameProtocol::lock())
-                gp->sendAllActions();
-        }
         PROFILER_POP_CPU_MARKER();   // MainLoop pop
         PROFILER_SYNC_FRAME();
     }  // while !m_abort

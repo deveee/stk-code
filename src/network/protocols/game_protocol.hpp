@@ -81,14 +81,15 @@ public:
     virtual ~GameProtocol();
 
     virtual bool notifyEventAsynchronous(Event* event) OVERRIDE;
-    virtual void update(int ticks) OVERRIDE {}
-    void sendAllActions();
+    virtual void update(int ticks) OVERRIDE;
 
     void controllerAction(int kart_id, PlayerAction action,
                           int value, int val_l, int val_r);
-    void startNewState(bool local_save);
+    void startNewState();
     void addState(BareNetworkString *buffer);
     void sendState();
+    void finalizeState(std::vector<std::string>& prev_rewinder,
+                       std::vector<std::string>& cur_rewinder);
     void adjustTimeForClient(STKPeer *peer, int ticks);
     void sendItemEventConfirmation(int ticks);
 
