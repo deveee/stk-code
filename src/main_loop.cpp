@@ -21,8 +21,10 @@
 
 #include "audio/sfx_manager.hpp"
 #include "config/user_config.hpp"
+#include "graphics/central_settings.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/material_manager.hpp"
+#include "graphics/sp/sp_texture_manager.hpp"
 #include "guiengine/engine.hpp"
 #include "guiengine/message_queue.hpp"
 #include "guiengine/modaldialog.hpp"
@@ -124,7 +126,9 @@ float MainLoop::getLimitedDt()
         // with clients (server time is supposed to be behind client time).
         // So we play it safe by adding a loop to make sure at least 1ms
         // (minimum time that can be handled by the integer timer) delay here.
-        while (dt <= 0)
+        // Only exception is profile mode (typically running without graphics),
+        // which we want to run as fast as possible.
+        while (dt <= 0 && !ProfileWorld::isProfileMode())
         {
             StkTime::sleep(1);
             m_curr_time = device->getTimer()->getRealTime();
@@ -321,7 +325,6 @@ void MainLoop::run()
 
         left_over_time += getLimitedDt();
         int num_steps   = stk_config->time2Ticks(left_over_time);
-
         float dt = stk_config->ticks2Time(1);
         left_over_time -= num_steps * dt ;
 
@@ -338,6 +341,19 @@ void MainLoop::run()
             STKHost::get()->shutdown();
             // In case the user opened a race pause dialog
             GUIEngine::ModalDialog::dismiss();
+
+#ifndef SERVER_ONLY
+            if (CVS->isGLSL())
+            {
+                // Flush all command before delete world, avoid later access
+                SP::SPTextureManager::get()
+                    ->checkForGLCommand(true/*before_scene*/);
+                // Reset screen in case the minimap was drawn
+                glViewport(0, 0, irr_driver->getActualScreenSize().Width,
+                    irr_driver->getActualScreenSize().Height);
+            }
+#endif
+
             if (World::getWorld())
             {
                 race_manager->clearNetworkGrandPrixResult();
@@ -371,8 +387,6 @@ void MainLoop::run()
                 input_manager->update(frame_duration);
                 GUIEngine::update(frame_duration);
                 PROFILER_POP_CPU_MARKER();
-                if (World::getWorld() && history->replayHistory())
-                    history->updateReplay(World::getWorld()->getTicksSinceStart());
                 PROFILER_PUSH_CPU_MARKER("Music", 0x7F, 0x00, 0x00);
                 SFXManager::get()->update();
                 PROFILER_POP_CPU_MARKER();
@@ -408,8 +422,11 @@ void MainLoop::run()
         }
         m_ticks_adjustment.unlock();
 
-        for (int i = 0; i < num_steps; i++)
+        for(int i=0; i<num_steps; i++)
         {
+            if (World::getWorld() && history->replayHistory())
+                history->updateReplay(World::getWorld()->getTicksSinceStart());
+
             PROFILER_PUSH_CPU_MARKER("Protocol manager update",
                                      0x7F, 0x00, 0x7F);
             if (auto pm = ProtocolManager::lock())

@@ -603,6 +603,7 @@ void cmdLineHelp()
     "       --disable-lan      Disable LAN detection (connect using WAN).\n"
     "       --auto-connect     Automatically connect to fist server and start race\n"
     "       --max-players=n    Maximum number of clients (server only).\n"
+    "       --min-players=n    Minimum number of clients (server only).\n"
     "       --motd             Message showing in all lobby of clients, can specify a .txt file.\n"
     "       --auto-end         Automatically end network game after 1st player finished\n"
     "                          for some time (currently his finished time * 0.25 + 15.0). \n"
@@ -611,6 +612,8 @@ void cmdLineHelp()
     "                          owner-less server.\n"
     "       --soccer-timed     Use time limit mode in network soccer game.\n"
     "       --soccer-goals     Use goals limit mode in network soccer game.\n"
+    "       --battle-mode=n    Specify battle mode in netowrk, 0 is Free For All and\n"
+    "                          1 is Capture The Flag.\n"
     "       --network-gp=n     Specify number of tracks used in network grand prix.\n"
     "       --no-validation    Allow non validated and unencrypted connection in wan.\n"
     "       --ranked           Server will submit ranking to stk addons server.\n"
@@ -752,11 +755,6 @@ int handleCmdLinePreliminary()
         TrackManager::addTrackSearchDir(s);
     if(CommandLine::has("--kartdir", &s))
         KartPropertiesManager::addKartSearchDir(s);
-
-#ifndef SERVER_ONLY
-    if(CommandLine::has("--no-graphics") || CommandLine::has("-l"))
-#endif
-        ProfileWorld::disableGraphics();
 
     if (CommandLine::has("--sp-shader-debug"))
         SP::SPShader::m_sp_shader_debug = true;
@@ -972,7 +970,7 @@ int handleCmdLine()
         if (!CommandLine::has("--track", &track))
             track = "temple";
         UserConfigParams::m_arena_ai_stats=true;
-        race_manager->setMinorMode(RaceManager::MINOR_MODE_3_STRIKES);
+        race_manager->setMinorMode(RaceManager::MINOR_MODE_BATTLE);
         std::vector<std::string> l;
         for (int i = 0; i < 8; i++)
             l.push_back("tux");
@@ -1028,7 +1026,7 @@ int handleCmdLine()
                 break;
         case 1: race_manager->setMinorMode(RaceManager::MINOR_MODE_TIME_TRIAL);
                 break;
-        case 2: race_manager->setMinorMode(RaceManager::MINOR_MODE_3_STRIKES);
+        case 2: race_manager->setMinorMode(RaceManager::MINOR_MODE_BATTLE);
                 break;
         case 3: race_manager->setMinorMode(RaceManager::MINOR_MODE_SOCCER);
                 break;
@@ -1140,12 +1138,28 @@ int handleCmdLine()
         NetworkConfig::get()->setServerIdFile(
             file_manager->getUserConfigFile(s));
     }
-    if(CommandLine::has("--disable-polling"))
+    if (CommandLine::has("--disable-polling"))
+    {
         Online::RequestManager::m_disable_polling = true;
-    if(CommandLine::has("--max-players", &n))
-        UserConfigParams::m_server_max_players=n;
-    NetworkConfig::get()->
-        setMaxPlayers(UserConfigParams::m_server_max_players);
+    }
+    if (CommandLine::has("--max-players", &n))
+    {
+        UserConfigParams::m_server_max_players = n;
+    }
+    
+    if (UserConfigParams::m_server_max_players < 1)
+    {
+        UserConfigParams::m_server_max_players = 1;
+    }
+    NetworkConfig::get()->setMaxPlayers(UserConfigParams::m_server_max_players);
+        
+    if (CommandLine::has("--min-players", &n))
+    {
+        float threshold = ((float)(n) - 0.5f) / 
+                                         UserConfigParams::m_server_max_players;
+        threshold = std::max(std::min(threshold, 1.0f), 0.0f);
+        UserConfigParams::m_start_game_threshold = threshold;
+    }
     if (CommandLine::has("--port", &n))
     {
         // We don't know if this instance is going to be a client
@@ -1246,6 +1260,8 @@ int handleCmdLine()
 
     const bool is_soccer =
         race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER;
+    const bool is_battle =
+        race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE;
     if (CommandLine::has("--soccer-timed") && is_soccer)
     {
         LobbyProtocol::get<LobbyProtocol>()->getGameSetup()
@@ -1267,6 +1283,31 @@ int handleCmdLine()
         NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
             RaceManager::MAJOR_MODE_GRAND_PRIX);
     }
+    else if (CommandLine::has("--battle-mode", &n) && is_battle)
+    {
+        switch (n)
+        {
+        case 0:
+            NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
+                RaceManager::MAJOR_MODE_FREE_FOR_ALL);
+            race_manager->setMajorMode(RaceManager::MAJOR_MODE_FREE_FOR_ALL);
+            break;
+        case 1:
+            NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
+                RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG);
+            race_manager->setMajorMode(RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG);
+            break;
+        default:
+            break;
+        }
+    }
+    else if (is_battle)
+    {
+        Log::warn("main", "Set to ffa for battle server");
+        NetworkConfig::get()->setServerMode(race_manager->getMinorMode(),
+            RaceManager::MAJOR_MODE_FREE_FOR_ALL);
+        race_manager->setMajorMode(RaceManager::MAJOR_MODE_FREE_FOR_ALL);
+    }
     else if (is_soccer)
     {
         Log::warn("main", "Set to goal target for soccer server");
@@ -1279,6 +1320,24 @@ int handleCmdLine()
     {
         NetworkConfig::get()->setServerMode(
             race_manager->getMinorMode(), RaceManager::MAJOR_MODE_SINGLE);
+    }
+
+    if (is_battle)
+    {
+        if (UserConfigParams::m_hit_limit_threshold < 0.0f &&
+            UserConfigParams::m_time_limit_threshold_ffa < 0.0f)
+        {
+            Log::warn("main", "Reset invalid hit and time limit settings");
+            UserConfigParams::m_hit_limit_threshold.revertToDefaults();
+            UserConfigParams::m_time_limit_threshold_ffa.revertToDefaults();
+        }
+        if (UserConfigParams::m_capture_limit_threshold < 0.0f &&
+            UserConfigParams::m_time_limit_threshold_ctf < 0.0f)
+        {
+            Log::warn("main", "Reset invalid Capture and time limit settings");
+            UserConfigParams::m_capture_limit_threshold.revertToDefaults();
+            UserConfigParams::m_time_limit_threshold_ctf.revertToDefaults();
+        }
     }
 
     // The extra server info has to be set before server lobby started
@@ -1377,7 +1436,7 @@ int handleCmdLine()
             race_manager->setDefaultAIKartList(l);
             // Add 1 for the player kart
             race_manager->setNumKarts(1);
-            race_manager->setMinorMode(RaceManager::MINOR_MODE_3_STRIKES);
+            race_manager->setMinorMode(RaceManager::MINOR_MODE_BATTLE);
         }
         else if (t->isSoccer())
         {
@@ -1738,6 +1797,22 @@ void askForInternetPermission()
 #endif
 
 // ----------------------------------------------------------------------------
+#ifdef ANDROID
+extern "C"
+{
+#endif
+void main_abort()
+{
+    if (main_loop)
+    {
+        main_loop->abort();
+    }
+}
+#ifdef ANDROID
+}
+#endif
+
+// ----------------------------------------------------------------------------
 int main(int argc, char *argv[] )
 {
     CommandLine::init(argc, argv);
@@ -1746,8 +1821,7 @@ int main(int argc, char *argv[] )
 #ifndef WIN32
     signal(SIGTERM, [](int signum)
         {
-            if (main_loop)
-                main_loop->abort();
+            main_abort();
         });
 #endif
     srand(( unsigned ) time( 0 ));
@@ -1764,6 +1838,11 @@ int main(int argc, char *argv[] )
             FileManager::setStdoutName(s);
         if (CommandLine::has("--stdout-dir", &s))
             FileManager::setStdoutDir(s);
+            
+#ifndef SERVER_ONLY
+        if(CommandLine::has("--no-graphics") || CommandLine::has("-l"))
+#endif
+            ProfileWorld::disableGraphics();
 
         // Init the minimum managers so that user config exists, then
         // handle all command line options that do not need (or must

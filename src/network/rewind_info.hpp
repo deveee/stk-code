@@ -21,13 +21,13 @@
 
 #include "network/event_rewinder.hpp"
 #include "network/network_string.hpp"
-#include "network/rewinder.hpp"
 #include "utils/cpp2011.hpp"
 #include "utils/leak_check.hpp"
 #include "utils/ptr_vector.hpp"
 
 #include <assert.h>
 #include <functional>
+#include <string>
 #include <vector>
 
 /** Used to store rewind information for a given time for all rewind
@@ -94,14 +94,22 @@ class RewindInfoState: public RewindInfo
 private:
     std::vector<std::string> m_rewinder_using;
 
+    int m_start_offset;
+
     /** Pointer to the buffer which stores all states. */
     BareNetworkString *m_buffer;
-public:
-             RewindInfoState(int ticks,  BareNetworkString *buffer, 
-                             bool is_confirmed);
-    virtual ~RewindInfoState() { delete m_buffer; };
-    virtual void restore();
 
+public:
+    // ------------------------------------------------------------------------
+    RewindInfoState(int ticks, int start_offset,
+                    std::vector<std::string>& rewinder_using,
+                    std::vector<uint8_t>& buffer);
+    // ------------------------------------------------------------------------
+    RewindInfoState(int ticks, BareNetworkString *buffer, bool is_confirmed);
+    // ------------------------------------------------------------------------
+    virtual ~RewindInfoState()                             { delete m_buffer; }
+    // ------------------------------------------------------------------------
+    virtual void restore();
     // ------------------------------------------------------------------------
     /** Returns a pointer to the state buffer. */
     BareNetworkString *getBuffer() const { return m_buffer; }
@@ -173,14 +181,18 @@ public:
 class RewindInfoEventFunction : public RewindInfo
 {
 private:
-    const std::function<void()> m_undo_function, m_replay_function;
+    const std::function<void()> m_undo_function, m_replay_function,
+        m_destroy_function;
 public:
     RewindInfoEventFunction(int ticks,
                             std::function<void()> undo_function = [](){},
                             std::function<void()> replay_function = [](){},
-                            bool is_confirmed = true)
-        : RewindInfo(ticks, is_confirmed),
-        m_undo_function(undo_function), m_replay_function(replay_function)   {}
+                            std::function<void()> destroy_function = [](){})
+        : RewindInfo(ticks, true/*is_confirmed*/),
+        m_undo_function(undo_function), m_replay_function(replay_function),
+        m_destroy_function(destroy_function) {}
+    // ------------------------------------------------------------------------
+    ~RewindInfoEventFunction()                       {  m_destroy_function(); }
     // ------------------------------------------------------------------------
     /** An event is never 'restored', it is only rewound. */
     void restore() {}

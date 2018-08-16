@@ -42,9 +42,9 @@
 #include "karts/kart_properties_manager.hpp"
 #include "modes/cutscene_world.hpp"
 #include "modes/demo_world.hpp"
+#include "modes/free_for_all.hpp"
 #include "modes/overworld.hpp"
 #include "modes/soccer_world.hpp"
-#include "modes/world_with_rank.hpp"
 #include "network/network_config.hpp"
 #include "network/stk_host.hpp"
 #include "network/protocols/client_lobby.hpp"
@@ -523,6 +523,7 @@ void RaceResultGUI::backToLobby()
         m_width_kart_name = 0;
         float max_finish_time = 0;
 
+        FreeForAll* ffa = dynamic_cast<FreeForAll*>(World::getWorld());
         for (unsigned int position = first_position;
         position <= race_manager->getNumberOfKarts() - sta; position++)
         {
@@ -542,6 +543,13 @@ void RaceResultGUI::backToLobby()
                 race_manager->getMinorMode() != RaceManager::MINOR_MODE_FOLLOW_LEADER)
             {
                 ri->m_finish_time_string = core::stringw(_("Eliminated"));
+            }
+            else if (race_manager->getMajorMode() == RaceManager::MAJOR_MODE_FREE_FOR_ALL ||
+                race_manager->getMajorMode() == RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG)
+            {
+                assert(ffa);
+                ri->m_finish_time_string =
+                    StringUtils::toWString(ffa->getKartScore(kart->getWorldKartId()));
             }
             else
             {
@@ -1046,8 +1054,8 @@ void RaceResultGUI::backToLobby()
         RowInfo *ri = &(m_all_row_infos[0]);
         int current_y = (int)ri->m_y_pos;
         SoccerWorld* sw = (SoccerWorld*)World::getWorld();
-        const int red_score = sw->getScore(SOCCER_TEAM_RED);
-        const int blue_score = sw->getScore(SOCCER_TEAM_BLUE);
+        const int red_score = sw->getScore(KART_TEAM_RED);
+        const int blue_score = sw->getScore(KART_TEAM_BLUE);
 
         GUIEngine::Widget *table_area = getWidget("result-table");
         int height = table_area->m_h + table_area->m_y;
@@ -1109,12 +1117,12 @@ void RaceResultGUI::backToLobby()
         //The red scorers:
         current_y += rect.Height / 2 + rect.Height / 4;
         font = GUIEngine::getSmallFont();
-        std::vector<SoccerWorld::ScorerData> scorers = sw->getScorers(SOCCER_TEAM_RED);
+        std::vector<SoccerWorld::ScorerData> scorers = sw->getScorers(KART_TEAM_RED);
         while (scorers.size() > 10)
         {
             scorers.erase(scorers.begin());
         }
-        std::vector<float> score_times = sw->getScoreTimes(SOCCER_TEAM_RED);
+        std::vector<float> score_times = sw->getScoreTimes(KART_TEAM_RED);
         while (score_times.size() > 10)
         {
             score_times.erase(score_times.begin());
@@ -1169,12 +1177,12 @@ void RaceResultGUI::backToLobby()
         //The blue scorers:
         current_y = prev_y;
         current_x += UserConfigParams::m_width / 2 - red_icon->getSize().Width / 2;
-        scorers = sw->getScorers(SOCCER_TEAM_BLUE);
+        scorers = sw->getScorers(KART_TEAM_BLUE);
         while (scorers.size() > 10)
         {
             scorers.erase(scorers.begin());
         }
-        score_times = sw->getScoreTimes(SOCCER_TEAM_BLUE);
+        score_times = sw->getScoreTimes(KART_TEAM_BLUE);
         while (score_times.size() > 10)
         {
             score_times.erase(score_times.begin());

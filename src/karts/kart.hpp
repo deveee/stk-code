@@ -157,20 +157,20 @@ protected:
 
     /** A short time after a collision acceleration is disabled to allow
      *  the karts to bounce back*/
-    int          m_bounce_back_ticks;
+    int16_t      m_bounce_back_ticks;
 
     /** Time a kart is invulnerable. */
-    int          m_invulnerable_ticks;
+    int16_t      m_invulnerable_ticks;
 
     /** How long a kart is being squashed. If this is >0
      *  the kart is squashed. */
-    int          m_squash_ticks;
+    float        m_squash_time;
 
     /** Current leaning of the kart. */
     float        m_current_lean;
 
     /** If > 0 then bubble gum effect is on. This is the sliding when hitting a gum on the floor, not the shield. */
-    int          m_bubblegum_ticks;
+    int16_t      m_bubblegum_ticks;
 
     /** The torque to apply after hitting a bubble gum. */
     float        m_bubblegum_torque;
@@ -218,13 +218,10 @@ protected:
 
     /** When a kart has its view blocked by the plunger, this variable will be
      *  > 0 the number it contains is the time left before removing plunger. */
-    int           m_view_blocked_by_plunger;
+    int16_t       m_view_blocked_by_plunger;
     /** The current speed (i.e. length of velocity vector) of this kart. */
     float         m_speed;
-    /** For camera handling an exponentially smoothened value is used, which
-     *  reduces stuttering of the camera. */
-    float         m_smoothed_speed;
-    
+
     /** For smoothing engine sound**/
     float         m_last_factor_engine_sound;
 
@@ -467,7 +464,11 @@ public:
     // ------------------------------------------------------------------------
     /** Makes a kart invulnerable for a certain amount of time. */
     virtual void setInvulnerableTicks(int ticks) OVERRIDE
-    { 
+    {
+        // The rest 2 bits are saving fire clicked and animation status for
+        // rewind
+        if (ticks > 16383)
+            ticks = 16383;
         m_invulnerable_ticks = ticks;
     }   // setInvulnerableTicks
     // ------------------------------------------------------------------------
@@ -499,7 +500,7 @@ public:
     virtual bool isOnMinNitroTime() const OVERRIDE { return m_min_nitro_ticks > 0; }
     // ------------------------------------------------------------------------
     /** Returns if the kart is currently being squashed. */
-    virtual bool isSquashed() const OVERRIDE { return m_squash_ticks >0; }
+    virtual bool isSquashed() const OVERRIDE;
     // ------------------------------------------------------------------------
     /** Shows the star effect for a certain time. */
     virtual void showStarEffect(float t) OVERRIDE;

@@ -22,6 +22,7 @@
 using namespace irr;
 
 #include <algorithm>
+#include <limits>
 
 #include "challenges/unlock_manager.hpp"
 #include "config/user_config.hpp"
@@ -85,7 +86,7 @@ RaceGUI::RaceGUI()
     m_negative_timer_additional_width = area.Width;
 
     if (race_manager->getMinorMode()==RaceManager::MINOR_MODE_FOLLOW_LEADER ||
-        race_manager->getMinorMode()==RaceManager::MINOR_MODE_3_STRIKES     ||
+        race_manager->getMinorMode()==RaceManager::MINOR_MODE_BATTLE     ||
         race_manager->getNumLaps() > 9)
         m_lap_width = font->getDimension(L"99/99").Width;
     else
@@ -336,7 +337,7 @@ void RaceGUI::drawScores()
         core::recti position(offset_x, offset_y,
             offset_x + 2*m_minimap_player_size, offset_y + 2*m_minimap_player_size);
 
-        core::stringw score = StringUtils::toWString(sw->getScore((SoccerTeam)i));
+        core::stringw score = StringUtils::toWString(sw->getScore((KartTeam)i));
         int string_height =
             GUIEngine::getFont()->getDimension(score.c_str()).Height;
         core::recti pos(position.UpperLeftCorner.X + 5,
@@ -381,8 +382,10 @@ void RaceGUI::drawGlobalTimer()
     bool use_digit_font = true;
 
     float elapsed_time = World::getWorld()->getTime();
-    if (!race_manager->hasTimeTarget() || race_manager
-        ->getMinorMode()==RaceManager::MINOR_MODE_SOCCER)
+    if (!race_manager->hasTimeTarget() ||
+        race_manager ->getMinorMode()==RaceManager::MINOR_MODE_SOCCER ||
+        race_manager->getMajorMode() == RaceManager::MAJOR_MODE_FREE_FOR_ALL ||
+        race_manager->getMajorMode() == RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG)
     {
         sw = core::stringw (
             StringUtils::timeToString(elapsed_time).c_str() );
@@ -710,6 +713,29 @@ void RaceGUI::drawRank(const AbstractKart *kart,
                       float min_ratio, int meter_width,
                       int meter_height, float dt)
 {
+    static video::SColor color = video::SColor(255, 255, 255, 255);
+    // Draw hit or capture limit in network game
+    if ((race_manager->getMajorMode() == RaceManager::MAJOR_MODE_FREE_FOR_ALL ||
+        race_manager->getMajorMode() == RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG) &&
+        race_manager->getHitCaptureLimit() != std::numeric_limits<int>::max())
+    {
+        gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
+        font->setScale(min_ratio * 1.0f);
+        font->setShadow(video::SColor(255, 128, 0, 0));
+        std::ostringstream oss;
+        oss << race_manager->getHitCaptureLimit();
+
+        core::recti pos;
+        pos.LowerRightCorner = core::vector2di(int(offset.X + 0.64f*meter_width),
+                                            int(offset.Y - 0.49f*meter_height));
+        pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.64f*meter_width),
+                                            int(offset.Y - 0.49f*meter_height));
+
+        font->draw(oss.str().c_str(), pos, color, true, true);
+        font->setScale(1.0f);
+        return;
+    }
+
     // Draw rank
     WorldWithRank *world = dynamic_cast<WorldWithRank*>(World::getWorld());
     if (!world || !world->displayRank())
@@ -775,7 +801,6 @@ void RaceGUI::drawRank(const AbstractKart *kart,
     pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.64f*meter_width),
                                           int(offset.Y - 0.49f*meter_height));
 
-    static video::SColor color = video::SColor(255, 255, 255, 255);
     font->draw(oss.str().c_str(), pos, color, true, true);
     font->setScale(1.0f);
 }   // drawRank

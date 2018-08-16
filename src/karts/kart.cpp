@@ -61,13 +61,10 @@
 #include "karts/rescue_animation.hpp"
 #include "karts/skidding.hpp"
 #include "main_loop.hpp"
-#include "modes/overworld.hpp"
-#include "modes/soccer_world.hpp"
-#include "modes/world.hpp"
+#include "modes/capture_the_flag.hpp"
 #include "modes/linear_world.hpp"
 #include "modes/overworld.hpp"
 #include "modes/soccer_world.hpp"
-#include "modes/world.hpp"
 #include "network/network_config.hpp"
 #include "network/race_event_manager.hpp"
 #include "network/rewind_manager.hpp"
@@ -91,6 +88,7 @@
 
 #include <algorithm> // for min and max
 #include <iostream>
+#include <limits>
 #include <cmath>
 
 
@@ -129,7 +127,7 @@ Kart::Kart (const std::string& ident, unsigned int world_kart_id,
     m_bubblegum_ticks      = 0;
     m_bubblegum_torque     = 0.0f;
     m_invulnerable_ticks   = 0;
-    m_squash_ticks         = 0;
+    m_squash_time          = std::numeric_limits<float>::max();
 
     m_shadow               = NULL;
     m_wheel_box            = NULL;
@@ -366,7 +364,7 @@ void Kart::reset()
     m_bubblegum_ticks      = 0;
     m_bubblegum_torque     = 0.0f;
     m_invulnerable_ticks   = 0;
-    m_squash_ticks         = 0;
+    m_squash_time          = std::numeric_limits<float>::max();
     m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
     m_collected_energy     = 0;
     m_has_started          = false;
@@ -722,7 +720,7 @@ void Kart::createPhysics()
     btTransform trans;
     trans.setIdentity();
     createBody(mass, trans, &m_kart_chassis,
-               m_kart_properties->getRestitution());
+               m_kart_properties->getRestitution(0.0f));
     std::vector<float> ang_fact = m_kart_properties->getStabilityAngularFactor();
     // The angular factor (with X and Z values <1) helps to keep the kart
     // upright, especially in case of a collision.
@@ -970,7 +968,7 @@ void Kart::finishedRace(float time, bool from_server)
     if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE   ||
         race_manager->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL    ||
         race_manager->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER ||
-        race_manager->getMinorMode() == RaceManager::MINOR_MODE_3_STRIKES     ||
+        race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE     ||
         race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER        ||
         race_manager->getMinorMode() == RaceManager::MINOR_MODE_EASTER_EGG)
     {
@@ -1025,10 +1023,16 @@ void Kart::setRaceResult()
         }
     }
     else if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER ||
-             race_manager->getMinorMode() == RaceManager::MINOR_MODE_3_STRIKES)
+             race_manager->getMajorMode() == RaceManager::MAJOR_MODE_3_STRIKES)
     {
         // the kart wins if it isn't eliminated
         m_race_result = !this->isEliminated();
+    }
+    else if (race_manager->getMajorMode() == RaceManager::MAJOR_MODE_FREE_FOR_ALL)
+    {
+        // the top kart wins
+        FreeForAll* ffa = dynamic_cast<FreeForAll*>(World::getWorld());
+        m_race_result = ffa->getKartAtPosition(1) == this;
     }
     else if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
     {
@@ -1079,9 +1083,10 @@ void Kart::collectedItem(ItemState *item_state)
         // slow down
         m_bubblegum_ticks =
             stk_config->time2Ticks(m_kart_properties->getBubblegumDuration());
-        m_bubblegum_torque = ((rand()%2)
-                           ?  m_kart_properties->getBubblegumTorque()
-                           : -m_kart_properties->getBubblegumTorque());
+        m_bubblegum_torque =
+            ((World::getWorld()->getTicksSinceStart() / 10) % 2 == 0) ?
+            m_kart_properties->getBubblegumTorque() :
+            -m_kart_properties->getBubblegumTorque();
         m_max_speed->setSlowdown(MaxSpeed::MS_DECREASE_BUBBLE,
                                  m_kart_properties->getBubblegumSpeedFraction() ,
                                  m_kart_properties->getBubblegumFadeInTicks(),
@@ -1272,37 +1277,24 @@ void Kart::eliminate()
  */
 void Kart::update(int ticks)
 {
+    m_powerup->update(ticks);
+
+    // Make the restitution depend on speed: this avoids collision issues,
+    // otherwise a collision with high speed can see a kart being push
+    // high up in the air (and out of control). So for higher speed we
+    // reduce the restitution, meaning the karts will get less of a push
+    // based on the collision speed.
+    m_body->setRestitution(m_kart_properties->getRestitution(fabsf(m_speed)));
+
     // Reset any instand speed increase in the bullet kart
     m_vehicle->setMinSpeed(0);
 
-    if(m_squash_ticks>=0)
-    {
-        m_squash_ticks-=ticks;
-        // If squasing time ends, reset the model
-        if(m_squash_ticks<=0)
-        {
-            m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
-            scene::ISceneNode* node =
-                m_kart_model->getAnimatedNode() ?
-                m_kart_model->getAnimatedNode() : m_node;
-            if (m_vehicle->getNumWheels() > 0)
-            {
-                scene::ISceneNode **wheels = m_kart_model->getWheelNodes();
-                for (int i = 0; i < 4 && i < m_vehicle->getNumWheels(); ++i)
-                {
-                    if (wheels[i])
-                        wheels[i]->setParent(node);
-                }
-            }
-        }
-    }   // if squashed
-
-    if (m_bubblegum_ticks > 0.0f)
+    if (m_bubblegum_ticks > 0)
     {
         m_bubblegum_ticks -= ticks;
-        if (m_bubblegum_ticks <= 0.0f)
+        if (m_bubblegum_ticks <= 0)
         {
-            m_bubblegum_torque = 0.0f;
+            m_bubblegum_torque = 0;
         }
     }
 
@@ -1752,23 +1744,42 @@ void Kart::setSquash(float time, float slowdown)
         ExplosionAnimation::create(this);
         return;
     }
-    m_node->setScale(core::vector3df(1.0f, 0.5f, 1.0f));
+
     m_max_speed->setSlowdown(MaxSpeed::MS_DECREASE_SQUASH, slowdown,
                              stk_config->time2Ticks(0.1f), 
                              stk_config->time2Ticks(time));
-    if (m_vehicle->getNumWheels() > 0)
+
+#ifndef SERVER_ONLY
+    if (m_squash_time == std::numeric_limits<float>::max())
     {
-        if (!m_wheel_box)
-            m_wheel_box = irr_driver->getSceneManager()->addDummyTransformationSceneNode(m_node);
-        scene::ISceneNode **wheels = m_kart_model->getWheelNodes();
-        for (int i = 0; i < 4 && i < m_vehicle->getNumWheels(); ++i)
+        m_node->setScale(core::vector3df(1.0f, 0.5f, 1.0f));
+        if (m_vehicle->getNumWheels() > 0)
         {
-            if (wheels[i])
-                wheels[i]->setParent(m_wheel_box);
+            if (!m_wheel_box)
+            {
+                m_wheel_box = irr_driver->getSceneManager()
+                    ->addDummyTransformationSceneNode(m_node);
+            }
+            scene::ISceneNode **wheels = m_kart_model->getWheelNodes();
+            for (int i = 0; i < 4 && i < m_vehicle->getNumWheels(); i++)
+            {
+                if (wheels[i])
+                    wheels[i]->setParent(m_wheel_box);
+            }
+            m_wheel_box->getRelativeTransformationMatrix()
+                .setScale(core::vector3df(1.0f, 2.0f, 1.0f));
         }
-        m_wheel_box->getRelativeTransformationMatrix().setScale(core::vector3df(1.0f, 2.0f, 1.0f));
+        m_squash_time = time;
     }
-    m_squash_ticks  = stk_config->time2Ticks(time);
+#endif
+}   // setSquash
+
+//-----------------------------------------------------------------------------
+/** Returns if the kart is currently being squashed
+  */
+bool Kart::isSquashed() const
+{
+    return m_max_speed->isSpeedDecreaseActive(MaxSpeed::MS_DECREASE_SQUASH);
 }   // setSquash
 
 //-----------------------------------------------------------------------------
@@ -2433,8 +2444,8 @@ void Kart::updatePhysics(int ticks)
                             /*fade_out_time*/stk_config->time2Ticks(5.0f));
         }
     }
-
-    m_bounce_back_ticks-=ticks;
+    if (m_bounce_back_ticks > std::numeric_limits<int16_t>::min())
+        m_bounce_back_ticks -= ticks;
 
     updateEnginePowerAndBrakes(ticks);
 
@@ -2941,6 +2952,31 @@ void Kart::updateGraphics(float dt)
         if (m_custom_sounds[n] != NULL) m_custom_sounds[n]->position(getXYZ());
     }
      */
+#ifndef SERVER_ONLY
+    if (m_squash_time != std::numeric_limits<float>::max())
+    {
+        m_squash_time -= dt;
+        // If squasing time ends, reset the model
+        if (m_squash_time <= 0.0f || !isSquashed())
+        {
+            m_squash_time = std::numeric_limits<float>::max();
+            m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
+            scene::ISceneNode* node =
+                m_kart_model->getAnimatedNode() ?
+                m_kart_model->getAnimatedNode() : m_node;
+            if (m_vehicle->getNumWheels() > 0)
+            {
+                scene::ISceneNode **wheels = m_kart_model->getWheelNodes();
+                for (int i = 0; i < 4 && i < m_vehicle->getNumWheels(); ++i)
+                {
+                    if (wheels[i])
+                        wheels[i]->setParent(node);
+                }
+            }
+        }
+    }   // if squashed
+#endif
+
     for (int i = 0; i < EMITTER_COUNT; i++)
         m_emitters[i]->setPosition(getXYZ());
     m_skid_sound->setPosition(getXYZ());

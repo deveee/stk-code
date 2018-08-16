@@ -30,6 +30,7 @@
 #include "guiengine/widget.hpp"
 #include "guiengine/widgets/list_widget.hpp"
 #include "guiengine/widgets/ribbon_widget.hpp"
+#include "guiengine/widgets/spinner_widget.hpp"
 #include "input/input_manager.hpp"
 #include "modes/demo_world.hpp"
 #include "modes/world.hpp"
@@ -44,7 +45,7 @@
 #include <iostream>
 
 #ifdef ANDROID
-#include <android_native_app_glue.h>
+#include "../../../lib/irrlicht/source/Irrlicht/stk_android_native_app_glue.h"
 #endif
 
 using GUIEngine::EventHandler;
@@ -387,8 +388,6 @@ void EventHandler::deallocate()
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 
-const bool NAVIGATION_DEBUG = false;
-
 #if 0
 #pragma mark -
 #pragma mark Private methods
@@ -489,6 +488,16 @@ void EventHandler::navigate(const NavigationDirection nav, const int playerID)
                 // The tab selection triggers an action
                 sendEventToUser(ribbon, ribbon->m_properties[PROP_ID], playerID);
             }
+        }
+
+        // For spinners, select the most intuitive button
+        // based on where the navigation came from
+        // Right if coming from right by a left press
+        // Left for all other directions
+        if (closest_widget->getType() == WTYPE_SPINNER)
+        {
+            SpinnerWidget* spinner = dynamic_cast<SpinnerWidget*>(closest_widget);
+            spinner->setSelectedButton(nav == NAV_LEFT);
         }
     }
 
@@ -726,6 +735,7 @@ EventPropagation EventHandler::onWidgetActivated(GUIEngine::Widget* w, const int
 
     Widget* parent = w->m_event_handler;
     
+    //FIXME : sendEventToUser do the same screen keyboard and modal dialog checks, so they are done twice
     if (ScreenKeyboard::isActive())
     {
         if (ScreenKeyboard::getCurrent()->processEvent(w->m_properties[PROP_ID]) == EVENT_BLOCK)
@@ -744,6 +754,13 @@ EventPropagation EventHandler::onWidgetActivated(GUIEngine::Widget* w, const int
     }
 
     //Log::info("EventHandler", "Widget activated: %s", w->m_properties[PROP_ID].c_str());
+
+    // For spinners, also trigger activation
+    if (w->getType() == WTYPE_SPINNER)
+    {
+        SpinnerWidget* spinner = dynamic_cast<SpinnerWidget*>(w);
+        spinner->activateSelectedButton();
+    }
 
     if (w->m_event_handler != NULL)
     {

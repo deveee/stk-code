@@ -123,12 +123,11 @@ void PhysicalObject::Settings::init()
 }   // Settings
 
 // ============================================================================
-PhysicalObject* PhysicalObject::fromXML(bool is_dynamic,
-                                        const XMLNode &xml_node,
-                                        TrackObject* object)
+std::shared_ptr<PhysicalObject> PhysicalObject::fromXML
+    (bool is_dynamic, const XMLNode &xml_node, TrackObject* object)
 {
     PhysicalObject::Settings settings(xml_node);
-    return new PhysicalObject(is_dynamic, settings, object);
+    return std::make_shared<PhysicalObject>(is_dynamic, settings, object);
 }   // fromXML
 
 // ----------------------------------------------------------------------------
@@ -136,7 +135,6 @@ PhysicalObject* PhysicalObject::fromXML(bool is_dynamic,
 PhysicalObject::PhysicalObject(bool is_dynamic,
                                const PhysicalObject::Settings& settings,
                                TrackObject* object)
-              : Rewinder("P", false/*can_be_destroyed*/, false/*auto_add*/)
 {
     m_shape              = NULL;
     m_body               = NULL;
@@ -793,7 +791,7 @@ void PhysicalObject::addForRewind()
     SmoothNetworkBody::setAdjustVerticalOffset(false);
     Rewinder::setUniqueIdentity(std::string("P") + StringUtils::toString
         (Track::getCurrentTrack()->getPhysicalObjectUID()));
-    Rewinder::add();
+    Rewinder::rewinderAdd();
 }   // addForRewind
 
 // ----------------------------------------------------------------------------
@@ -816,9 +814,9 @@ BareNetworkString* PhysicalObject::saveState(std::vector<std::string>* ru)
 {
     btTransform cur_transform = m_body->getWorldTransform();
     if ((cur_transform.getOrigin() - m_last_transform.getOrigin())
-        .length() == 0.0f &&
-        m_body->getLinearVelocity() == m_last_lv &&
-        m_body->getLinearVelocity() == m_last_av)
+        .length() < 0.01f &&
+        (m_body->getLinearVelocity() - m_last_lv).length() < 0.01f &&
+        (m_body->getLinearVelocity() - m_last_av).length() < 0.01f)
         return nullptr;
 
     ru->push_back(getUniqueIdentity());
@@ -827,7 +825,7 @@ BareNetworkString* PhysicalObject::saveState(std::vector<std::string>* ru)
     m_last_lv = m_body->getLinearVelocity();
     m_last_av = m_body->getAngularVelocity();
     CompressNetworkBody::compress(m_last_transform, m_last_lv, m_last_av,
-        buffer);
+        buffer, m_body, m_motion_state);
     return buffer;
 }   // saveState
 

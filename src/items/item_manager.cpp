@@ -26,6 +26,7 @@
 #include "karts/abstract_kart.hpp"
 #include "karts/controller/spare_tire_ai.hpp"
 #include "modes/easter_egg_hunt.hpp"
+#include "modes/profile_world.hpp"
 #include "network/network_config.hpp"
 #include "network/race_event_manager.hpp"
 #include "physics/triangle_mesh.hpp"
@@ -43,19 +44,20 @@
 #include <string>
 
 
-std::vector<scene::IMesh *> ItemManager::m_item_mesh;
-std::vector<scene::IMesh *> ItemManager::m_item_lowres_mesh;
-std::vector<video::SColorf> ItemManager::m_glow_color;
-bool                        ItemManager::m_disable_item_collection = false;
-ItemManager *               ItemManager::m_item_manager = NULL;
-std::mt19937                ItemManager::m_random_engine;
+std::vector<scene::IMesh *>  ItemManager::m_item_mesh;
+std::vector<scene::IMesh *>  ItemManager::m_item_lowres_mesh;
+std::vector<video::SColorf>  ItemManager::m_glow_color;
+bool                         ItemManager::m_disable_item_collection = false;
+std::shared_ptr<ItemManager> ItemManager::m_item_manager;
+std::mt19937                 ItemManager::m_random_engine;
 
 //-----------------------------------------------------------------------------
 /** Creates one instance of the item manager. */
 void ItemManager::create()
 {
     assert(!m_item_manager);
-    m_item_manager = new ItemManager();
+    // Due to protected constructor use new instead of make_shared
+    m_item_manager = std::shared_ptr<ItemManager>(new ItemManager());
 }   // create
 
 //-----------------------------------------------------------------------------
@@ -63,8 +65,7 @@ void ItemManager::create()
 void ItemManager::destroy()
 {
     assert(m_item_manager);
-    delete m_item_manager;
-    m_item_manager = NULL;
+    m_item_manager = nullptr;
 }   // destroy
 
 //-----------------------------------------------------------------------------
@@ -312,7 +313,8 @@ Item* ItemManager::placeItem(ItemState::ItemType type, const Vec3& xyz,
     // Make sure this subroutine is not used otherwise (since networking
     // needs to be aware of items added to the track, so this would need
     // to be added).
-    assert(World::getWorld()->getPhase() == WorldStatus::SETUP_PHASE);
+    assert(World::getWorld()->getPhase() == WorldStatus::SETUP_PHASE ||
+           ProfileWorld::isProfileMode()                               );
     ItemState::ItemType mesh_type = type;
 
     Item* item = new Item(type, xyz, normal, m_item_mesh[mesh_type],
