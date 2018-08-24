@@ -1064,6 +1064,8 @@ void World::update(int ticks)
         // Update all karts that are not eliminated
         if(!m_karts[i]->isEliminated() || (sta && sta->isMoving()))
             m_karts[i]->update(ticks);
+        if (isStartPhase())
+            m_karts[i]->makeKartRest();
     }
     PROFILER_POP_CPU_MARKER();
     if(race_manager->isRecordingRace()) ReplayRecorder::get()->update(ticks);
@@ -1510,9 +1512,9 @@ void World::initTeamArrows()
 
     //Loading the indicator textures
     std::string red_path =
-            file_manager->getAsset(FileManager::GUI, "soccer_player_red.png");
+            file_manager->getAsset(FileManager::GUI, "red_arrow.png");
     std::string blue_path =
-            file_manager->getAsset(FileManager::GUI, "soccer_player_blue.png");
+            file_manager->getAsset(FileManager::GUI, "blue_arrow.png");
 
     //Assigning indicators
     for(unsigned int i = 0; i < kart_amount; i++)

@@ -406,7 +406,7 @@ bool Flyable::updateAndDelete(int ticks)
     {
         if (!RewindManager::get()->isRewinding())
         {
-            m_animation->update(stk_config->ticks2Time(ticks));
+            m_animation->update(ticks);
             Moveable::update(ticks);
         }
         return false;
@@ -565,7 +565,7 @@ void Flyable::explode(AbstractKart *kart_hit, PhysicalObject *object,
             // The explosion animation will register itself with the kart
             // and will free it later.
             ExplosionAnimation::create(kart, getXYZ(), kart==kart_hit);
-            if(kart==kart_hit && Track::getCurrentTrack()->isArena())
+            if (kart == kart_hit)
             {
                 world->kartHit(kart->getWorldKartId(),
                     m_owner->getWorldKartId());

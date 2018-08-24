@@ -27,7 +27,7 @@ namespace irr
 {
     namespace scene
     {
-        class IAnimatedMeshSceneNode; class IAnimatedMesh;
+        class IAnimatedMeshSceneNode; class IAnimatedMesh; class ISceneNode;
     }
 }
 
@@ -38,9 +38,13 @@ private:
 
     scene::IAnimatedMeshSceneNode* m_blue_flag_node;
 
-    irr::scene::IAnimatedMesh* m_red_flag_mesh;
+    scene::IAnimatedMesh* m_red_flag_mesh;
 
-    irr::scene::IAnimatedMesh* m_blue_flag_mesh;
+    scene::IAnimatedMesh* m_blue_flag_mesh;
+
+    scene::ISceneNode* m_red_flag_indicator;
+
+    scene::ISceneNode* m_blue_flag_indicator;
 
     SFXBase* m_scored_sound;
 
@@ -48,11 +52,16 @@ private:
 
     btTransform m_red_trans, m_blue_trans, m_orig_red_trans, m_orig_blue_trans;
 
+    int m_red_return_ticks, m_blue_return_ticks;
+
     // ------------------------------------------------------------------------
     void updateFlagNodes();
     // ------------------------------------------------------------------------
-    bool getDroppedFlagTrans(const btTransform& kt, bool red_flag,
-                             btTransform* out) const;
+    bool getDroppedFlagTrans(const btTransform& kt, btTransform* out) const;
+    // ------------------------------------------------------------------------
+    void resetRedFlagToOrigin();
+    // ------------------------------------------------------------------------
+    void resetBlueFlagToOrigin();
     // ------------------------------------------------------------------------
     virtual video::SColor getColor(unsigned int kart_id) const OVERRIDE;
 
@@ -75,6 +84,8 @@ public:
     virtual bool isRaceOver() OVERRIDE;
     // ------------------------------------------------------------------------
     virtual bool kartHit(int kart_id, int hitter = -1) OVERRIDE;
+    // ------------------------------------------------------------------------
+    virtual unsigned int getRescuePositionIndex(AbstractKart *kart) OVERRIDE;
     // ------------------------------------------------------------------------
     void attachFlag(NetworkString& ns);
     // ------------------------------------------------------------------------
@@ -102,6 +113,18 @@ public:
     int getRedHolder() const                           { return m_red_holder; }
     // ------------------------------------------------------------------------
     int getBlueHolder() const                         { return m_blue_holder; }
+    // ------------------------------------------------------------------------
+    bool isRedFlagInBase() const
+    {
+        return m_red_holder == -1 &&
+            m_red_trans.getOrigin() == m_orig_red_trans.getOrigin();
+    }
+    // ------------------------------------------------------------------------
+    bool isBlueFlagInBase() const
+    {
+        return m_blue_holder == -1 &&
+            m_blue_trans.getOrigin() == m_orig_blue_trans.getOrigin();
+    }
     // ------------------------------------------------------------------------
     const Vec3& getRedFlag() const   { return (Vec3&)m_red_trans.getOrigin(); }
     // ------------------------------------------------------------------------
