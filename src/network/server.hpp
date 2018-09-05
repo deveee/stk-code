@@ -30,7 +30,9 @@
 
 #include <irrString.h>
 
+#include <map>
 #include <string>
+#include <tuple>
 
 class XMLNode;
 
@@ -86,15 +88,19 @@ protected:
     bool m_supports_encrytion;
 
     bool m_game_started;
+
+    std::vector<std::pair</*lower case username*/std::string, std::tuple<
+        /*rank*/int, core::stringw, /*scores*/double, /*playing time*/float
+        > > > m_players;
+
 public:
 
          /** Initialises the object from an XML node. */
-         Server(const XMLNode &xml);
+         Server(const XMLNode& server_info);
          Server(unsigned server_id, const irr::core::stringw &name,
                 int max_players, int current_players, unsigned difficulty,
                 unsigned server_mode, const TransportAddress &address,
                 bool password_protected, bool game_started);
-    bool filterByWords(const irr::core::stringw words) const;
     // ------------------------------------------------------------------------
     /** Returns ip address and port of this server. */
     const TransportAddress& getAddress() const { return m_address; }
@@ -138,5 +144,28 @@ public:
     bool isOfficial() const                              { return m_official; }
     // ------------------------------------------------------------------------
     bool isGameStarted() const                       { return m_game_started; }
+    // ------------------------------------------------------------------------
+    const std::vector<std::pair<std::string,
+        std::tuple<int, core::stringw, double, float> > >& getPlayers() const
+                                                          { return m_players; }
+    // ------------------------------------------------------------------------
+    bool searchByName(const std::string& lower_case_word)
+    {
+        auto list = StringUtils::split(lower_case_word, ' ', false);
+        bool server_name_found = false;
+        for (auto& word : list)
+        {
+            server_name_found =
+                m_lower_case_name.find(word) != std::string::npos;
+            if (server_name_found)
+                break;
+            for (auto& p : m_players)
+            {
+                if (p.first.find(word) != std::string::npos)
+                    return true;
+            }
+        }
+        return server_name_found;
+    }
 };   // Server
 #endif // HEADER_SERVER_HPP

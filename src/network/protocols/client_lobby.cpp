@@ -34,6 +34,7 @@
 #include "network/network_config.hpp"
 #include "network/network_player_profile.hpp"
 #include "network/network_timer_synchronizer.hpp"
+#include "network/protocols/connect_to_server.hpp"
 #include "network/protocols/game_protocol.hpp"
 #include "network/protocols/game_events_protocol.hpp"
 #include "network/race_event_manager.hpp"
@@ -72,7 +73,9 @@ engine.
 ClientLobby::ClientLobby(const TransportAddress& a, std::shared_ptr<Server> s)
            : LobbyProtocol(NULL)
 {
-    m_waiting_for_game.store(false);
+    m_waiting_for_game = false;
+    m_server_auto_lap = false;
+    m_received_server_result = false;
     m_state.store(NONE);
     m_server_address = a;
     m_server = s;
@@ -94,6 +97,15 @@ ClientLobby::ClientLobby(const TransportAddress& a, std::shared_ptr<Server> s)
 ClientLobby::~ClientLobby()
 {
     clearPlayers();
+    if (m_server->supportsEncryption())
+    {
+        Online::XMLRequest* request =
+            new Online::XMLRequest(true/*manager_memory*/);
+        NetworkConfig::get()->setServerDetails(request,
+            "clear-user-joined-server");
+        request->queue();
+        ConnectToServer::m_previous_unjoin = request->observeExistence();
+    }
 }   // ClientLobby
 
 //-----------------------------------------------------------------------------
@@ -206,6 +218,10 @@ bool ClientLobby::notifyEventAsynchronous(Event* event)
 //-----------------------------------------------------------------------------
 void ClientLobby::addAllPlayers(Event* event)
 {
+    // In case the user opened a user info dialog
+    GUIEngine::ModalDialog::dismiss();
+    GUIEngine::ScreenKeyboard::dismiss();
+
     if (!checkDataSize(event, 1))
     {
         // If recieved invalid message for players leave now
@@ -352,6 +368,7 @@ void ClientLobby::update(int ticks)
             m_received_server_result = true;
             // In case someone opened paused race dialog or menu in network game
             GUIEngine::ModalDialog::dismiss();
+            GUIEngine::ScreenKeyboard::dismiss();
             if (StateManager::get()->getGameState() == GUIEngine::INGAME_MENU)
                 StateManager::get()->enterGameState();
             World::getWorld()->enterRaceOverState();
@@ -628,7 +645,7 @@ void ClientLobby::updatePlayerList(Event* event)
     if (!checkDataSize(event, 1)) return;
     NetworkString& data = event->data();
     bool waiting = data.getUInt8() == 1;
-    if (m_waiting_for_game.load() && !waiting)
+    if (m_waiting_for_game && !waiting)
     {
         // The waiting game finished
         NetworkingLobby::getInstance()
@@ -636,7 +653,7 @@ void ClientLobby::updatePlayerList(Event* event)
         SFXManager::get()->quickSound("wee");
     }
 
-    m_waiting_for_game.store(waiting);
+    m_waiting_for_game = waiting;
     unsigned player_count = data.getUInt8();
     std::vector<std::tuple<uint32_t, uint32_t, uint32_t, core::stringw,
         int, KartTeam> > players;
@@ -803,7 +820,8 @@ void ClientLobby::startSelection(Event* event)
 {
     SFXManager::get()->quickSound("wee");
     const NetworkString& data = event->data();
-    uint8_t skip_kart_screen = data.getUInt8();
+    bool skip_kart_screen = data.getUInt8() == 1;
+    m_server_auto_lap = data.getUInt8() == 1;
     const unsigned kart_num = data.getUInt16();
     const unsigned track_num = data.getUInt16();
     m_available_karts.clear();
@@ -829,7 +847,7 @@ void ClientLobby::startSelection(Event* event)
     screen->setAvailableKartsFromServer(m_available_karts);
     // In case of auto-connect or continue a grand prix, use random karts
     // (or previous kart) from server and go to track selection
-    if (NetworkConfig::get()->isAutoConnect() || skip_kart_screen == 1)
+    if (NetworkConfig::get()->isAutoConnect() || skip_kart_screen)
     {
         input_manager->setMasterPlayerOnly(true);
         for (auto& p : NetworkConfig::get()->getNetworkPlayers())
@@ -891,6 +909,10 @@ void ClientLobby::raceFinished(Event* event)
  */
 void ClientLobby::exitResultScreen(Event *event)
 {
+    // In case the user opened a user info dialog
+    GUIEngine::ModalDialog::dismiss();
+    GUIEngine::ScreenKeyboard::dismiss();
+    
     setup();
     m_state.store(CONNECTED);
     RaceResultGUI::getInstance()->backToLobby();

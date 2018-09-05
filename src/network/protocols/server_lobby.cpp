@@ -796,7 +796,8 @@ void ServerLobby::startSelection(const Event *event)
     // a new screen, which must be done from the main thread.
     ns->setSynchronous(true);
     ns->addUInt8(LE_START_SELECTION).addUInt8(
-        m_game_setup->isGrandPrixStarted() ? 1 : 0);
+        m_game_setup->isGrandPrixStarted() ? 1 : 0)
+        .addUInt8(UserConfigParams::m_auto_lap_ratio > 0.0f ? 1 : 0);
 
     // Remove karts / tracks from server that are not supported on all clients
     std::set<std::string> karts_erase, tracks_erase;
@@ -915,8 +916,12 @@ void ServerLobby::checkIncomingConnectionRequests()
             auto sl = m_server_lobby.lock();
             if (!sl || (sl->m_state.load() != WAITING_FOR_START_GAME &&
                 !sl->allowJoinedPlayersWaiting()))
+            {
+                sl->replaceKeys(keys);
                 return;
+            }
 
+            sl->removeExpiredPeerConnection();
             for (unsigned int i = 0; i < users_xml->getNumNodes(); i++)
             {
                 uint32_t addr, id;
@@ -930,13 +935,18 @@ void ServerLobby::checkIncomingConnectionRequests()
                 keys[id].m_tried = false;
                 if (UserConfigParams::m_firewalled_server)
                 {
-                    std::make_shared<ConnectToPeer>
-                        (TransportAddress(addr, port))->requestStart();
+                    TransportAddress peer_addr(addr, port);
+                    std::string peer_addr_str = peer_addr.toString();
+                    if (sl->m_pending_peer_connection.find(peer_addr_str) !=
+                        sl->m_pending_peer_connection.end())
+                    {
+                        continue;
+                    }
+                    std::make_shared<ConnectToPeer>(peer_addr)->requestStart();
+                    sl->addPeerConnection(peer_addr_str);
                 }
             }
-            if (keys.empty())
-                return;
-            sl->addAndReplaceKeys(keys);
+            sl->replaceKeys(keys);
         }
     public:
         PollServerRequest(std::shared_ptr<ServerLobby> sl)
@@ -1750,18 +1760,41 @@ void ServerLobby::playerVote(Event* event)
     }
 
     NetworkString& data = event->data();
+    std::string track_name;
+    data.decodeString(&track_name);
+    uint8_t lap = data.getUInt8();
+    uint8_t reverse = data.getUInt8();
+
+    if (race_manager->modeHasLaps())
+    {
+        if (UserConfigParams::m_auto_lap_ratio > 0.0f)
+        {
+            Track* t = track_manager->getTrack(track_name);
+            if (t)
+            {
+                lap = (uint8_t)(fmaxf(1.0f,
+                    (float)t->getDefaultNumberOfLaps() *
+                    UserConfigParams::m_auto_lap_ratio));
+            }
+            else
+            {
+                // Prevent someone send invalid vote
+                track_name = *m_available_kts.second.begin();
+                lap = (uint8_t)3;
+            }
+        }
+        else if (lap == 0)
+            lap = (uint8_t)3;
+    }
+
     NetworkString other = NetworkString(PROTOCOL_LOBBY_ROOM);
     std::string name = StringUtils::wideToUtf8(event->getPeer()
         ->getPlayerProfiles()[0]->getName());
     other.setSynchronous(true);
     other.addUInt8(LE_VOTE).addFloat(UserConfigParams::m_voting_timeout)
-        .encodeString(name).addUInt32(event->getPeer()->getHostId());
-    other += data;
+        .encodeString(name).addUInt32(event->getPeer()->getHostId())
+        .encodeString(track_name).addUInt8(lap).addUInt8(reverse);
 
-    std::string track_name;
-    data.decodeString(&track_name);
-    uint8_t lap = data.getUInt8();
-    uint8_t reverse = data.getUInt8();
     m_peers_votes[event->getPeerSP()] =
         std::make_tuple(track_name, lap, reverse == 1);
     sendMessageToPeers(&other);
