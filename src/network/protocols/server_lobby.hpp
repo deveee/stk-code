@@ -100,10 +100,15 @@ private:
 
     /** Lock this mutex whenever a client is connect / disconnect or
      *  starting race. */
-    std::mutex m_connection_mutex;
+    mutable std::mutex m_connection_mutex;
 
-    /** Ban list ip (in decimal) with online user id. */
-    std::map<uint32_t, uint32_t> m_ban_list;
+    /** Ban list of ip ranges. */
+    std::map</*ip_start*/uint32_t, std::tuple</*ip_end*/uint32_t,
+        /*CIDR*/std::string, /*expired time epoch*/uint32_t> >
+        m_ip_ban_list;
+
+    /** Ban list of online user id. */
+    std::map<uint32_t, /*expired time epoch*/uint32_t> m_online_id_ban_list;
 
     TransportAddress m_server_address;
 
@@ -143,7 +148,13 @@ private:
 
     std::atomic<uint32_t> m_waiting_players_counts;
 
+    uint64_t m_server_started_at, m_server_delay;
+
+    unsigned m_server_id_online;
+
     bool m_registered_for_once_only;
+
+    bool m_save_server_config;
 
     // connection management
     void clientDisconnected(Event* event);
@@ -255,14 +266,18 @@ public:
     void finishedLoadingWorld() OVERRIDE;
     ServerState getCurrentState() const { return m_state.load(); }
     void updateBanList();
+    std::unique_lock<std::mutex> acquireConnectionMutex() const
+                   { return std::unique_lock<std::mutex>(m_connection_mutex); }
     bool waitingForPlayers() const;
     uint32_t getWaitingPlayersCount() const
                                     { return m_waiting_players_counts.load(); }
     virtual bool allPlayersReady() const OVERRIDE
                             { return m_state.load() >= WAIT_FOR_RACE_STARTED; }
     virtual bool isRacing() const OVERRIDE { return m_state.load() == RACING; }
+    bool isBannedForIP(const TransportAddress& addr) const;
     bool allowJoinedPlayersWaiting() const;
-
+    void setSaveServerConfig(bool val)          { m_save_server_config = val; }
+    float getStartupBoostOrPenaltyForKart(uint32_t ping, unsigned kart_id);
 };   // class ServerLobby
 
 #endif // SERVER_LOBBY_HPP

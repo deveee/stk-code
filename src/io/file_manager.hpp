@@ -99,6 +99,8 @@ private:
     /** Directory where user-defined grand prix are stored. */
     std::string       m_gp_dir;
 
+    std::string       m_cert_location;
+
     std::vector<TextureSearchPath> m_texture_search_path;
 
     std::vector<std::string>
@@ -198,7 +200,8 @@ public:
     void       redirectOutput();
 
     bool       fileIsNewer(const std::string& f1, const std::string& f2) const;
-
+    // ------------------------------------------------------------------------
+    const std::string& getUserConfigDir() const   { return m_user_config_dir; }
     // ------------------------------------------------------------------------
     /** Returns the irrlicht file system. */
     irr::io::IFileSystem* getFileSystem() { return m_file_system; }
@@ -224,6 +227,7 @@ public:
     {
         return m_subdir_name[SHADER];
     }
+    const std::string& getCertLocation() const { return m_cert_location; }
 };   // FileManager
 
 extern FileManager* file_manager;

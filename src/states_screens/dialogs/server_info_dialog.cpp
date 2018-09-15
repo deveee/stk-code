@@ -24,8 +24,8 @@
 #include "guiengine/widgets/ribbon_widget.hpp"
 #include "guiengine/widgets/text_box_widget.hpp"
 #include "network/server.hpp"
+#include "network/server_config.hpp"
 #include "network/stk_host.hpp"
-#include "network/network_config.hpp"
 #include "states_screens/networking_lobby.hpp"
 #include "states_screens/state_manager.hpp"
 #include "utils/string_utils.hpp"
@@ -85,8 +85,7 @@ ServerInfoDialog::ServerInfoDialog(std::shared_ptr<Server> server)
     server_info += L"\n";
 
     //I18N: In server info dialog
-    core::stringw mode =
-        NetworkConfig::get()->getModeName(server->getServerMode());
+    core::stringw mode = ServerConfig::getModeName(server->getServerMode());
     each_line = _("Game mode: %s", mode);
     server_info += each_line;
     server_info += L"\n";
@@ -109,9 +108,8 @@ ServerInfoDialog::ServerInfoDialog(std::shared_ptr<Server> server)
         row.push_back(ListWidget::ListCell(_("Time played"),
             -1, 1, true));
         player_list->addItem("player", row);
-        for (auto& p : players)
+        for (auto& r : players)
         {
-            auto& r = p.second;
             row.clear();
             row.push_back(ListWidget::ListCell(
                 std::get<0>(r) == -1 ? L"-" :
@@ -148,12 +146,12 @@ void ServerInfoDialog::requestJoin()
         assert(m_password != NULL);
         if (m_password->getText().empty())
             return;
-        NetworkConfig::get()->setPassword(
-            StringUtils::wideToUtf8(m_password->getText()));
+        ServerConfig::m_private_server_password =
+            StringUtils::wideToUtf8(m_password->getText());
     }
     else
     {
-        NetworkConfig::get()->setPassword("");
+        ServerConfig::m_private_server_password = "";
     }
     STKHost::create();
     NetworkingLobby::getInstance()->setJoinedServer(m_server);

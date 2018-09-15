@@ -346,6 +346,8 @@ void FileManager::init()
         for(int i=0;i<(int)dirs.size(); i++)
             pushMusicSearchPath(dirs[i]);
     }
+    m_cert_location = m_file_system->getAbsolutePath(
+        getAsset("addons.supertuxkart.net.pem").c_str()).c_str();
 }   // init
 
 //-----------------------------------------------------------------------------
@@ -921,7 +923,7 @@ void FileManager::checkAndCreateConfigDir()
     if(m_user_config_dir.size()>0 && *m_user_config_dir.rbegin()!='/')
         m_user_config_dir += "/";
 
-    m_user_config_dir +="0.8.2/";
+    m_user_config_dir +="0.10-git/";
     if(!checkAndCreateDirectoryP(m_user_config_dir))
     {
         Log::warn("FileManager", "Can not  create config dir '%s', "

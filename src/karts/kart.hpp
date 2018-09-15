@@ -30,6 +30,7 @@
 
 #include "items/powerup_manager.hpp"    // For PowerupType
 #include "karts/abstract_kart.hpp"
+#include "utils/cpp2011.hpp"
 #include "utils/no_copy.hpp"
 
 #include <SColor.h>
@@ -67,6 +68,8 @@ class TerrainInfo;
 class Kart : public AbstractKart
 {
     friend class Skidding;
+private:
+    int m_network_finish_check_ticks;
 protected:
     /** Offset of the graphical kart chassis from the physical chassis. */
     float m_graphical_y_offset;
@@ -144,10 +147,6 @@ protected:
     /** For stars rotating around head effect */
     Stars *m_stars_effect;
 
-    /** True if the kart hasn't moved since 'ready-set-go' - used to
-     *  determine startup boost. */
-    bool         m_has_started;
-
     /** Maximum engine rpm's for the current gear. */
     float        m_max_gear_rpm;
 
@@ -209,6 +208,7 @@ protected:
     /** The skidmarks object for this kart. */
     SkidMarks      *m_skidmarks;
 
+    float           m_startup_boost;
     float           m_finish_time;
     bool            m_finished_race;
 
@@ -297,8 +297,9 @@ public:
     virtual void  setBoostAI     (bool boosted) OVERRIDE;
     virtual bool  getBoostAI     () const OVERRIDE;
     virtual void  collectedItem(ItemState *item) OVERRIDE;
-    virtual float getStartupBoost() const;
-
+    virtual float getStartupBoostFromStartTicks(int ticks) const OVERRIDE;
+    virtual float getStartupBoost() const OVERRIDE  { return m_startup_boost; }
+    virtual void setStartupBoost(float val) OVERRIDE { m_startup_boost = val; }
     virtual const Material *getMaterial() const OVERRIDE;
     virtual const Material *getLastMaterial() const OVERRIDE;
     /** Returns the pitch of the terrain depending on the heading. */

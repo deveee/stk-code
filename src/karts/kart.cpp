@@ -64,9 +64,11 @@
 #include "modes/capture_the_flag.hpp"
 #include "modes/linear_world.hpp"
 #include "modes/overworld.hpp"
+#include "modes/profile_world.hpp"
 #include "modes/soccer_world.hpp"
 #include "network/network_config.hpp"
 #include "network/race_event_manager.hpp"
+#include "network/rewind_info.hpp"
 #include "network/rewind_manager.hpp"
 #include "physics/btKart.hpp"
 #include "physics/btKartRaycast.hpp"
@@ -317,6 +319,7 @@ void Kart::reset()
         stopFlying();
     }
 
+    m_network_finish_check_ticks = 0;
     // Add karts back in case that they have been removed (i.e. in battle
     // mode) - but only if they actually have a body (e.g. ghost karts
     // don't have one).
@@ -367,7 +370,6 @@ void Kart::reset()
     m_squash_time          = std::numeric_limits<float>::max();
     m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
     m_collected_energy     = 0;
-    m_has_started          = false;
     m_bounce_back_ticks    = 0;
     m_brake_ticks          = 0;
     m_ticks_last_crash     = 0;
@@ -377,7 +379,7 @@ void Kart::reset()
     m_view_blocked_by_plunger = 0;
     m_has_caught_nolok_bubblegum = false;
     m_is_jumping           = false;
-
+    m_startup_boost        = 0.0f;
     for (int i=0;i<m_xyz_history_size;i++)
     {
         m_previous_xyz[i] = getXYZ();
@@ -917,6 +919,10 @@ void Kart::finishedRace(float time, bool from_server)
     // it would trigger a race end again.
     if (m_finished_race) return;
 
+    const bool is_linear_race =
+        race_manager->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE ||
+        race_manager->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL  ||
+        race_manager->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER;
     if (NetworkConfig::get()->isNetworking() && !from_server)
     {
         if (NetworkConfig::get()->isServer())
@@ -928,6 +934,30 @@ void Kart::finishedRace(float time, bool from_server)
         // network game.
         else if (NetworkConfig::get()->isClient())
         {
+            if (is_linear_race && m_saved_controller == NULL &&
+                !RewindManager::get()->isRewinding())
+            {
+                m_network_finish_check_ticks =
+                    World::getWorld()->getTicksSinceStart() +
+                    stk_config->time2Ticks(1.0f);
+                EndController* ec = new EndController(this, m_controller);
+                Controller* old_controller = m_controller;
+                setController(ec);
+                // Seamless endcontroller replay
+                RewindManager::get()->addRewindInfoEventFunction(new
+                RewindInfoEventFunction(
+                    World::getWorld()->getTicksSinceStart(),
+                    /*undo_function*/[old_controller, this]()
+                    {
+                        m_controller = old_controller;
+                    },
+                    /*replay_function*/[ec, old_controller, this]()
+                    {
+                        m_saved_controller = old_controller;
+                        ec->reset();
+                        m_controller = ec;
+                    }));
+            }
             return;
         }
     }   // !from_server
@@ -943,10 +973,7 @@ void Kart::finishedRace(float time, bool from_server)
     // If this is spare tire kart, end now
     if (dynamic_cast<SpareTireAI*>(m_controller) != NULL) return;
 
-    if ((race_manager->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE ||
-         race_manager->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL  ||
-         race_manager->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER)
-         && m_controller->isPlayerController())
+    if (is_linear_race && m_controller->isPlayerController())
     {
         RaceGUIBase* m = World::getWorld()->getRaceGUI();
         if (m)
@@ -976,7 +1003,12 @@ void Kart::finishedRace(float time, bool from_server)
         setRaceResult();
         if (!isGhostKart())
         {
-            setController(new EndController(this, m_controller));
+            if (m_saved_controller == NULL)
+            {
+                setController(new EndController(this, m_controller));
+            }
+            else
+                m_saved_controller->finishedRace(time);
         }
         // Skip animation if this kart is eliminated
         if (m_eliminated || isGhostKart()) return;
@@ -1111,23 +1143,26 @@ void Kart::collectedItem(ItemState *item_state)
 }   // collectedItem
 
 //-----------------------------------------------------------------------------
-/** Called the first time a kart accelerates after 'ready-set-go'. It searches
+/** Called the first time a kart accelerates after 'ready'. It searches
  *  through the startup times to find the appropriate slot, and returns the
  *  speed-boost from the corresponding entry.
  *  If the kart started too slow (i.e. slower than the longest time in the
  *  startup times list), it returns 0.
  */
-float Kart::getStartupBoost() const
+float Kart::getStartupBoostFromStartTicks(int ticks) const
 {
-    float t = stk_config->ticks2Time(World::getWorld()->getTicksSinceStart());
+    int ticks_since_ready = ticks - stk_config->time2Ticks(1.0f);
+    if (ticks_since_ready < 0)
+        return 0.0f;
+    float t = stk_config->ticks2Time(ticks_since_ready);
     std::vector<float> startup_times = m_kart_properties->getStartupTime();
     for (unsigned int i = 0; i < startup_times.size(); i++)
     {
         if (t <= startup_times[i])
             return m_kart_properties->getStartupBoost()[i];
     }
-    return 0;
-}   // getStartupBoost
+    return 0.0f;
+}   // getStartupBoostFromStartTicks
 
 //-----------------------------------------------------------------------------
 /** Simulates gears by adjusting the force of the engine. It also takes the
@@ -1282,6 +1317,18 @@ void Kart::eliminate()
  */
 void Kart::update(int ticks)
 {
+    if (m_network_finish_check_ticks != 0 &&
+        World::getWorld()->getTicksSinceStart() >
+        m_network_finish_check_ticks &&
+        !m_finished_race && m_saved_controller != NULL)
+    {
+        Log::warn("Kart", "Missing finish race from server.");
+        m_network_finish_check_ticks = 0;
+        delete m_controller;
+        m_controller = m_saved_controller;
+        m_saved_controller = NULL;
+    }
+
     m_powerup->update(ticks);
 
     // Reset any instand speed increase in the bullet kart
@@ -1783,7 +1830,8 @@ void Kart::setSquash(float time, float slowdown)
   */
 bool Kart::isSquashed() const
 {
-    return m_max_speed->isSpeedDecreaseActive(MaxSpeed::MS_DECREASE_SQUASH);
+    return
+        m_max_speed->isSpeedDecreaseActive(MaxSpeed::MS_DECREASE_SQUASH) == 1;
 }   // setSquash
 
 //-----------------------------------------------------------------------------
@@ -2431,21 +2479,18 @@ bool Kart::playCustomSFX(unsigned int type)
  */
 void Kart::updatePhysics(int ticks)
 {
-    // Check if accel is pressed for the first time. The actual timing
-    // is done in getStartupBoost - it returns 0 if the start was actually
-    // too slow to qualify for a boost.
-    if(!m_has_started && m_controls.getAccel())
+    if (m_controls.getAccel() > 0.0f &&
+        World::getWorld()->getTicksSinceStart() == 1)
     {
-        m_has_started = true;
-        float f       = getStartupBoost();
-        if(f >= 0.0f)
+        if (m_startup_boost > 0.0f)
         {
-            m_kart_gfx->setCreationRateAbsolute(KartGFX::KGFX_ZIPPER, 100*f);
+            m_kart_gfx->setCreationRateAbsolute(KartGFX::KGFX_ZIPPER,
+                100.0f * m_startup_boost);
             m_max_speed->instantSpeedIncrease(MaxSpeed::MS_INCREASE_ZIPPER,
-                            0.9f*f, f,
-                            /*engine_force*/200.0f,
-                            /*duration*/stk_config->time2Ticks(5.0f),
-                            /*fade_out_time*/stk_config->time2Ticks(5.0f));
+                0.9f * m_startup_boost, m_startup_boost,
+                /*engine_force*/200.0f,
+                /*duration*/stk_config->time2Ticks(5.0f),
+                /*fade_out_time*/stk_config->time2Ticks(5.0f));
         }
     }
     if (m_bounce_back_ticks > std::numeric_limits<int16_t>::min())
@@ -3136,6 +3181,9 @@ btQuaternion Kart::getVisualRotation() const
 void Kart::setOnScreenText(const wchar_t *text)
 {
 #ifndef SERVER_ONLY
+    if (ProfileWorld::isNoGraphics())
+        return;
+        
     BoldFace* bold_face = font_manager->getFont<BoldFace>();
     core::dimension2d<u32> textsize = bold_face->getDimension(text);
 
