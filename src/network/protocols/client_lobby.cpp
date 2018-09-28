@@ -42,11 +42,11 @@
 #include "network/server_config.hpp"
 #include "network/stk_host.hpp"
 #include "network/stk_peer.hpp"
-#include "states_screens/networking_lobby.hpp"
-#include "states_screens/network_kart_selection.hpp"
+#include "states_screens/online/networking_lobby.hpp"
+#include "states_screens/online/network_kart_selection.hpp"
 #include "states_screens/race_result_gui.hpp"
 #include "states_screens/state_manager.hpp"
-#include "states_screens/tracks_screen.hpp"
+#include "states_screens/online/tracks_screen.hpp"
 #include "tracks/track.hpp"
 #include "tracks/track_manager.hpp"
 #include "utils/log.hpp"
@@ -376,6 +376,14 @@ void ClientLobby::update(int ticks)
         break;
     case REQUESTING_CONNECTION:
     case CONNECTED:
+        if (STKHost::get()->isAuthorisedToControl() &&
+            NetworkConfig::get()->isAutoConnect())
+        {
+            // Send a message to the server to start
+            NetworkString start(PROTOCOL_LOBBY_ROOM);
+            start.addUInt8(LobbyProtocol::LE_REQUEST_BEGIN);
+            STKHost::get()->sendToServer(&start, true);
+        }
     case SELECTING_ASSETS:
     case RACING:
     case EXITING:
@@ -709,15 +717,6 @@ void ClientLobby::handleBadConnection()
 void ClientLobby::becomingServerOwner()
 {
     STKHost::get()->setAuthorisedToControl(true);
-    if (m_state.load() == CONNECTED && NetworkConfig::get()->isAutoConnect())
-    {
-        // Send a message to the server to start
-        NetworkString start(PROTOCOL_LOBBY_ROOM);
-        start.setSynchronous(true);
-        start.addUInt8(LobbyProtocol::LE_REQUEST_BEGIN);
-        STKHost::get()->sendToServer(&start, true);
-    }
-
     if (STKHost::get()->isClientServer())
         return;
 

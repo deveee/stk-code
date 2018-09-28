@@ -186,9 +186,13 @@ protected:
     btVehicleRaycaster      *m_vehicle_raycaster;
     btKart                  *m_vehicle;
 
-     /** The amount of energy collected by hitting coins. Note that it
+     /** The amount of energy collected with nitro cans. Note that it
       *  must be float, since dt is subtraced in each timestep. */
     float         m_collected_energy;
+
+    float         m_consumption_per_tick;
+
+    float         m_energy_to_min_ratio;
 
     // Graphical effects
     // -----------------
@@ -219,6 +223,9 @@ protected:
     /** When a kart has its view blocked by the plunger, this variable will be
      *  > 0 the number it contains is the time left before removing plunger. */
     int16_t       m_view_blocked_by_plunger;
+
+    float         m_graphical_view_blocked_by_plunger;
+
     /** The current speed (i.e. length of velocity vector) of this kart. */
     float         m_speed;
 
@@ -309,6 +316,7 @@ public:
     virtual void   handleZipper     (const Material *m=NULL,
                                      bool play_sound=false) OVERRIDE;
     virtual void   setSquash        (float time, float slowdown) OVERRIDE;
+    virtual void   unsetSquash      () OVERRIDE;
 
     virtual void   crashed          (AbstractKart *k, bool update_attachments) OVERRIDE;
     virtual void   crashed          (const Material *m, const Vec3 &normal) OVERRIDE;
@@ -388,6 +396,9 @@ public:
     /** Returns true if the kart has a plunger attached to its face. */
     virtual int getBlockedByPlungerTicks() const OVERRIDE
                                          { return m_view_blocked_by_plunger; }
+    // ------------------------------------------------------------------------
+    virtual float getGraphicalViewBlockedByPlunger() const OVERRIDE
+                               { return m_graphical_view_blocked_by_plunger; }
     // ------------------------------------------------------------------------
     /** Sets that the view is blocked by a plunger. The duration depends on
      *  the difficulty, see KartPorperties getPlungerInFaceTime. */

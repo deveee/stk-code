@@ -169,7 +169,7 @@ void SelectChallengeDialog::updateSolvedIcon(const ChallengeStatus* c, RaceManag
     if (c->isSolved(diff))
     {
         IconButtonWidget* btn = getWidget<IconButtonWidget>(widget_name);
-        btn->setImage(file_manager->getAsset(FileManager::GUI, path),
+        btn->setImage(file_manager->getAsset(FileManager::GUI_ICON, path),
                      IconButtonWidget::ICON_PATH_TYPE_ABSOLUTE);
     }
 } //updateSolvedIcon
@@ -211,7 +211,6 @@ GUIEngine::EventPropagation SelectChallengeDialog::processEvent(const std::strin
         // Set up race manager appropriately
         race_manager->setNumPlayers(1);
         race_manager->setPlayerKart(0, UserConfigParams::m_default_kart);
-        race_manager->setReverseTrack(false);
 
         //int id = StateManager::get()->createActivePlayer( unlock_manager->getCurrentPlayer(), device );
         input_manager->getDeviceManager()->setSinglePlayer( StateManager::get()->getActivePlayer(0) );

@@ -118,18 +118,9 @@ Kart::Kart (const std::string& ident, unsigned int world_kart_id,
     m_max_speed            = new MaxSpeed(this);
     m_terrain_info         = new TerrainInfo();
     m_powerup              = new Powerup(this);
-    m_last_used_powerup    = PowerupManager::POWERUP_NOTHING;
     m_vehicle              = NULL;
     m_initial_position     = position;
-    m_race_position        = position;
-    m_collected_energy     = 0;
-    m_finished_race        = false;
     m_race_result          = false;
-    m_finish_time          = 0.0f;
-    m_bubblegum_ticks      = 0;
-    m_bubblegum_torque     = 0.0f;
-    m_invulnerable_ticks   = 0;
-    m_squash_time          = std::numeric_limits<float>::max();
 
     m_shadow               = NULL;
     m_wheel_box            = NULL;
@@ -138,13 +129,13 @@ Kart::Kart (const std::string& ident, unsigned int world_kart_id,
     m_skidmarks            = NULL;
     m_controller           = NULL;
     m_saved_controller     = NULL;
-    m_flying               = false;
     m_stars_effect         = NULL;
-    m_is_jumping           = false;
-    m_min_nitro_ticks      = 0;
+    m_consumption_per_tick = stk_config->ticks2Time(1) *
+                             m_kart_properties->getNitroConsumption();
     m_fire_clicked         = 0;
     m_boosted_ai           = false;
     m_type                 = RaceManager::KT_AI;
+    m_flying               = false;
 
     m_xyz_history_size     = stk_config->time2Ticks(XYZ_HISTORY_TIME);
 
@@ -154,17 +145,12 @@ Kart::Kart (const std::string& ident, unsigned int world_kart_id,
         m_previous_xyz.push_back(initial_position);
         m_previous_xyz_times.push_back(0.0f);
     }
-    m_time_previous_counter = 0.0f;
-
-    m_view_blocked_by_plunger = 0;
-    m_has_caught_nolok_bubblegum = false;
 
     // Initialize custom sound vector (TODO: add back when properly done)
     // m_custom_sounds.resize(SFXManager::NUM_CUSTOMS);
 
     // Set position and heading:
     m_reset_transform         = init_transform;
-    m_speed                   = 0.0f;
     m_last_factor_engine_sound = 0.0f;
 
     m_kart_model->setKart(this);
@@ -199,7 +185,7 @@ Kart::Kart (const std::string& ident, unsigned int world_kart_id,
     m_terrain_sound          = NULL;
     m_last_sound_material    = NULL;
     m_previous_terrain_sound = NULL;
-
+    m_graphical_view_blocked_by_plunger = 0.0f;
 }   // Kart
 
 // -----------------------------------------------------------------------------
@@ -313,7 +299,7 @@ Kart::~Kart()
  */
 void Kart::reset()
 {
-    if (m_flying)
+    if (m_flying && !isGhostKart())
     {
         m_flying = false;
         stopFlying();
@@ -330,6 +316,9 @@ void Kart::reset()
     }
 
     m_min_nitro_ticks = 0;
+    m_energy_to_min_ratio = 0;
+    m_consumption_per_tick = stk_config->ticks2Time(1) *
+                             m_kart_properties->getNitroConsumption();
 
     // Reset star effect in case that it is currently being shown.
     m_stars_effect->reset();
@@ -360,6 +349,9 @@ void Kart::reset()
         m_collision_particles->setCreationRateAbsolute(0.0f);
 #endif
 
+    unsetSquash();
+
+    m_last_used_powerup    = PowerupManager::POWERUP_NOTHING;
     m_race_position        = m_initial_position;
     m_finished_race        = false;
     m_eliminated           = false;
@@ -367,8 +359,9 @@ void Kart::reset()
     m_bubblegum_ticks      = 0;
     m_bubblegum_torque     = 0.0f;
     m_invulnerable_ticks   = 0;
+    m_min_nitro_ticks      = 0;
+    m_energy_to_min_ratio  = 0;
     m_squash_time          = std::numeric_limits<float>::max();
-    m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
     m_collected_energy     = 0;
     m_bounce_back_ticks    = 0;
     m_brake_ticks          = 0;
@@ -377,9 +370,14 @@ void Kart::reset()
     m_current_lean         = 0.0f;
     m_falling_time         = 0.0f;
     m_view_blocked_by_plunger = 0;
+    m_graphical_view_blocked_by_plunger = 0.0f;
     m_has_caught_nolok_bubblegum = false;
     m_is_jumping           = false;
+    m_flying               = false;
     m_startup_boost        = 0.0f;
+
+    m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
+
     for (int i=0;i<m_xyz_history_size;i++)
     {
         m_previous_xyz[i] = getXYZ();
@@ -593,8 +591,15 @@ void Kart::blockViewWithPlunger()
 {
     // Avoid that a plunger extends the plunger time
     if(m_view_blocked_by_plunger<=0 && !isShielded())
+    {
         m_view_blocked_by_plunger = 
         stk_config->time2Ticks(m_kart_properties->getPlungerInFaceTime());
+        if (m_graphical_view_blocked_by_plunger == 0.0f)
+        {
+             m_graphical_view_blocked_by_plunger =
+                m_kart_properties->getPlungerInFaceTime();
+        }
+    }
     if(isShielded())
     {
         decreaseShieldTime();
@@ -878,22 +883,27 @@ float Kart::getSpeedForTurnRadius(float radius) const
     InterpolationArray turn_angle_at_speed = m_kart_properties->getTurnRadius();
     // Convert the turn radius into turn angle
     for(int i = 0; i < (int)turn_angle_at_speed.size(); i++)
-        turn_angle_at_speed.setY(i, sin(m_kart_properties->getWheelBase() /
-            turn_angle_at_speed.getY(i)));
+        turn_angle_at_speed.setY(i, sin( 1.0 / turn_angle_at_speed.getY(i)));
 
-    float angle = sin(m_kart_properties->getWheelBase() / radius);
+    float angle = sin(1.0 / radius);
     return turn_angle_at_speed.getReverse(angle);
 }   // getSpeedForTurnRadius
 
 // ------------------------------------------------------------------------
-/** Returns the maximum steering angle (depending on speed). */
+/** Returns the maximum steering angle (depending on speed).
+    This is proportional to kart length because physics reverse this effect,
+    the results of this function should not be used to determine the
+    real raw steer angle. */
 float Kart::getMaxSteerAngle(float speed) const
 {
     InterpolationArray turn_angle_at_speed = m_kart_properties->getTurnRadius();
     // Convert the turn radius into turn angle
+    // We multiply by wheel base to keep turn radius identical
+    // across karts of different lengths sharing the same
+    // turn radius properties
     for(int i = 0; i < (int)turn_angle_at_speed.size(); i++)
-        turn_angle_at_speed.setY(i, sin(m_kart_properties->getWheelBase() /
-            turn_angle_at_speed.getY(i)));
+        turn_angle_at_speed.setY(i, sin( 1.0 / turn_angle_at_speed.getY(i))
+                                    * m_kart_properties->getWheelBase());
 
     return turn_angle_at_speed.get(speed);
 }   // getMaxSteerAngle
@@ -949,10 +959,16 @@ void Kart::finishedRace(float time, bool from_server)
                     World::getWorld()->getTicksSinceStart(),
                     /*undo_function*/[old_controller, this]()
                     {
+                        if (m_network_finish_check_ticks == -1)
+                            return;
+
                         m_controller = old_controller;
                     },
                     /*replay_function*/[ec, old_controller, this]()
                     {
+                        if (m_network_finish_check_ticks == -1)
+                            return;
+
                         m_saved_controller = old_controller;
                         ec->reset();
                         m_controller = ec;
@@ -1317,13 +1333,13 @@ void Kart::eliminate()
  */
 void Kart::update(int ticks)
 {
-    if (m_network_finish_check_ticks != 0 &&
+    if (m_network_finish_check_ticks > 0 &&
         World::getWorld()->getTicksSinceStart() >
         m_network_finish_check_ticks &&
         !m_finished_race && m_saved_controller != NULL)
     {
         Log::warn("Kart", "Missing finish race from server.");
-        m_network_finish_check_ticks = 0;
+        m_network_finish_check_ticks = -1;
         delete m_controller;
         m_controller = m_saved_controller;
         m_saved_controller = NULL;
@@ -1426,7 +1442,10 @@ void Kart::update(int ticks)
     if(m_view_blocked_by_plunger > 0) m_view_blocked_by_plunger -= ticks;
     //unblock the view if kart just became shielded
     if(isShielded())
+    {
         m_view_blocked_by_plunger = 0;
+        m_graphical_view_blocked_by_plunger = 0.0f;
+    }
     // Decrease remaining invulnerability time
     if(m_invulnerable_ticks>0)
     {
@@ -1535,7 +1554,7 @@ void Kart::update(int ticks)
         "v(16-18) %f %f %f steerf(20) %f maxangle(22) %f speed(24) %f "
         "steering(26-27) %f %f clock(29) %lf skidstate(31) %d factor(33) %f "
         "maxspeed(35) %f engf(37) %f braketick(39) %d brakes(41) %d heading(43) %f "
-        "noderot(45) %f suslen %f",
+        "bubticks(45) %d bubtor(47) %f",
         getIdent().c_str(),
         World::getWorld()->getTime(), World::getWorld()->getTicksSinceStart(),
         getXYZ().getX(), getXYZ().getY(), getXYZ().getZ(),
@@ -1556,8 +1575,8 @@ void Kart::update(int ticks)
         m_brake_ticks, //39
         m_controls.getButtonsCompressed(),  //41
         getHeading(),  //43
-        m_node->getAbsoluteTransformation().getRotationDegrees().Y,  //45
-        m_vehicle->getWheelInfo(0).m_raycastInfo.m_suspensionLength
+        m_bubblegum_ticks, // 45
+        m_bubblegum_torque // 47
     );
 #endif
     // After the physics step was done, the position of the wheels (as stored
@@ -1666,6 +1685,7 @@ void Kart::update(int ticks)
     if (emergency)
     {
         m_view_blocked_by_plunger = 0;
+        m_graphical_view_blocked_by_plunger = 0.0f;
         if (m_flying)
         {
             stopFlying();
@@ -1824,6 +1844,31 @@ void Kart::setSquash(float time, float slowdown)
     }
 #endif
 }   // setSquash
+
+void Kart::unsetSquash()
+{
+#ifndef SERVER_ONLY
+    if (isGhostKart()) return;
+
+    m_squash_time = std::numeric_limits<float>::max();
+    m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
+        
+    if (m_vehicle && m_vehicle->getNumWheels() > 0)
+    {
+        scene::ISceneNode** wheels = m_kart_model->getWheelNodes();
+        scene::ISceneNode* node = m_kart_model->getAnimatedNode() ?
+                                  m_kart_model->getAnimatedNode() : m_node;
+        
+        for (int i = 0; i < 4 && i < m_vehicle->getNumWheels(); i++)
+        {
+            if (wheels[i])
+            {
+                wheels[i]->setParent(node);
+            }
+        }
+    }
+#endif
+}
 
 //-----------------------------------------------------------------------------
 /** Returns if the kart is currently being squashed
@@ -2122,9 +2167,14 @@ void Kart::handleZipper(const Material *material, bool play_sound)
  */
 void Kart::updateNitro(int ticks)
 {
-    if (m_controls.getNitro() && m_min_nitro_ticks <= 0)
+    if (m_collected_energy == 0)
+        m_min_nitro_ticks = 0;
+
+    if (m_controls.getNitro() && m_min_nitro_ticks <= 0 && m_collected_energy > 0)
     {
         m_min_nitro_ticks = m_kart_properties->getNitroMinConsumptionTicks();
+        float min_consumption = m_min_nitro_ticks * m_consumption_per_tick;
+        m_energy_to_min_ratio = std::min<float>(1, m_collected_energy/min_consumption);
     }
     if (m_min_nitro_ticks > 0)
     {
@@ -2147,8 +2197,8 @@ void Kart::updateNitro(int ticks)
         return;
     }
 
-    float dt = stk_config->ticks2Time(ticks);
-    m_collected_energy -= dt * m_kart_properties->getNitroConsumption();
+
+    m_collected_energy -= m_consumption_per_tick*ticks;
     if (m_collected_energy < 0)
     {
         if(m_nitro_sound->getStatus() == SFXBase::SFX_PLAYING && !rewinding)
@@ -2161,10 +2211,11 @@ void Kart::updateNitro(int ticks)
     {
         if(m_nitro_sound->getStatus() != SFXBase::SFX_PLAYING && !rewinding)
             m_nitro_sound->play();
+
         m_max_speed->increaseMaxSpeed(MaxSpeed::MS_INCREASE_NITRO,
             m_kart_properties->getNitroMaxSpeedIncrease(),
             m_kart_properties->getNitroEngineForce(),
-            stk_config->time2Ticks(m_kart_properties->getNitroDuration()),
+            stk_config->time2Ticks(m_kart_properties->getNitroDuration()*m_energy_to_min_ratio),
             stk_config->time2Ticks(m_kart_properties->getNitroFadeOutTime()));
     }
     else
@@ -3008,22 +3059,13 @@ void Kart::updateGraphics(float dt)
         // If squasing time ends, reset the model
         if (m_squash_time <= 0.0f || !isSquashed())
         {
-            m_squash_time = std::numeric_limits<float>::max();
-            m_node->setScale(core::vector3df(1.0f, 1.0f, 1.0f));
-            scene::ISceneNode* node =
-                m_kart_model->getAnimatedNode() ?
-                m_kart_model->getAnimatedNode() : m_node;
-            if (m_vehicle->getNumWheels() > 0)
-            {
-                scene::ISceneNode **wheels = m_kart_model->getWheelNodes();
-                for (int i = 0; i < 4 && i < m_vehicle->getNumWheels(); ++i)
-                {
-                    if (wheels[i])
-                        wheels[i]->setParent(node);
-                }
-            }
+            unsetSquash();
         }
     }   // if squashed
+    if (m_graphical_view_blocked_by_plunger > 0.0f)
+        m_graphical_view_blocked_by_plunger -= dt;
+    if (m_graphical_view_blocked_by_plunger < 0.0f)
+        m_graphical_view_blocked_by_plunger = 0.0f;
 #endif
 
     for (int i = 0; i < EMITTER_COUNT; i++)

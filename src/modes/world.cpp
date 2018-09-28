@@ -44,6 +44,7 @@
 #include "karts/controller/soccer_ai.hpp"
 #include "karts/controller/spare_tire_ai.hpp"
 #include "karts/controller/test_ai.hpp"
+#include "karts/controller/network_ai_controller.hpp"
 #include "karts/controller/network_player_controller.hpp"
 #include "karts/kart.hpp"
 #include "karts/kart_model.hpp"
@@ -228,8 +229,8 @@ void World::init()
                 global_player_id, race_manager->getKartType(i),
                 race_manager->getPlayerDifficulty(i));
         }
+        new_kart->setBoostAI(race_manager->hasBoostedAI(i));
         m_karts.push_back(new_kart);
-
     }  // for i
 
     // Load other custom models if needed
@@ -387,15 +388,22 @@ std::shared_ptr<AbstractKart> World::createKart
     {
     case RaceManager::KT_PLAYER:
     {
-        controller = new LocalPlayerController(new_kart.get(), local_player_id,
-            difficulty);
-        const PlayerProfile* p = StateManager::get()
-            ->getActivePlayer(local_player_id)->getConstProfile();
-        if (p && p->getDefaultKartColor() > 0.0f)
+        if (NetworkConfig::get()->isNetworkAITester())
         {
-            ri->setHue(p->getDefaultKartColor());
+            controller = new NetworkAIController(new_kart.get(),
+                    local_player_id, new SkiddingAI(new_kart.get()));
         }
-
+        else
+        {
+            controller = new LocalPlayerController(new_kart.get(),
+                local_player_id, difficulty);
+            const PlayerProfile* p = StateManager::get()
+                ->getActivePlayer(local_player_id)->getConstProfile();
+            if (p && p->getDefaultKartColor() > 0.0f)
+            {
+                ri->setHue(p->getDefaultKartColor());
+            }
+        }
         m_num_players ++;
         break;
     }
@@ -1524,9 +1532,9 @@ void World::initTeamArrows()
 
     //Loading the indicator textures
     std::string red_path =
-            file_manager->getAsset(FileManager::GUI, "red_arrow.png");
+            file_manager->getAsset(FileManager::GUI_ICON, "red_arrow.png");
     std::string blue_path =
-            file_manager->getAsset(FileManager::GUI, "blue_arrow.png");
+            file_manager->getAsset(FileManager::GUI_ICON, "blue_arrow.png");
 
     //Assigning indicators
     for(unsigned int i = 0; i < kart_amount; i++)
