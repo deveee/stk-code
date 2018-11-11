@@ -110,11 +110,15 @@ RaceGUI::RaceGUI()
         else
             map_size_splitscreen = 0.5f;
     }
+    
+    World* world = World::getWorld();
+    assert(world != NULL);
 
     // Originally m_map_height was 100, and we take 480 as minimum res
     float scaling = irr_driver->getFrameSize().Height / 480.0f;
     const float map_size = stk_config->m_minimap_size * map_size_splitscreen;
-    const float top_margin = 3.5f * m_font_height;
+    const float top_margin = world->raceHasLaps() ? 3.5f * m_font_height
+                                                  : 1.8f * m_font_height;
     
     if (UserConfigParams::m_multitouch_enabled && 
         UserConfigParams::m_multitouch_mode != 0 &&
@@ -187,7 +191,6 @@ RaceGUI::RaceGUI()
     //createMarkerTexture();
 
     // Load icon textures for later reuse
-    m_lap_flag = irr_driver->getTexture(FileManager::GUI_ICON, "lap_flag.png");
     m_red_team = irr_driver->getTexture(FileManager::GUI_ICON, "soccer_ball_red.png");
     m_blue_team = irr_driver->getTexture(FileManager::GUI_ICON, "soccer_ball_blue.png");
     m_red_flag = irr_driver->getTexture(FileManager::GUI_ICON, "red_flag.png");
@@ -541,9 +544,16 @@ void RaceGUI::drawGlobalMiniMap()
 {
 #ifndef SERVER_ONLY
     //TODO : exception for some game modes ? Another option "Hidden in race, shown in battle ?"
-    if (UserConfigParams::m_minimap_display == 2 /*map hidden*/ ||
-        UserConfigParams::m_multitouch_scale > 1.3f)
+    if (UserConfigParams::m_minimap_display == 2) /*map hidden*/
         return;
+    
+    if (m_multitouch_gui != NULL)
+    {
+        float max_scale = World::getWorld()->raceHasLaps() ? 1.3f : 1.5f;
+                                                      
+        if (UserConfigParams::m_multitouch_scale > max_scale)
+            return;
+    }
 
     // draw a map when arena has a navigation mesh.
     Track *track = Track::getCurrentTrack();
@@ -1075,10 +1085,14 @@ void RaceGUI::drawMeterTexture(video::ITexture *meter_texture, video::S3DVertex 
     m.MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
     irr_driver->getVideoDriver()->setMaterial(m);
     glEnable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     draw2DVertexPrimitiveList(m.getTexture(0), vertices, count,
         index, count-2, video::EVT_STANDARD, scene::EPT_TRIANGLE_FAN);
     glDisable(GL_BLEND);
+    glEnable(GL_CULL_FACE);
+
 #endif
 }   // drawMeterTexture
 

@@ -842,11 +842,14 @@ void ServerLobby::startSelection(const Event *event)
             red_blue.first + red_blue.second != 1)
         {
             Log::warn("ServerLobby", "Bad team choosing.");
-            NetworkString* bt = getNetworkString();
-            bt->setSynchronous(true);
-            bt->addUInt8(LE_BAD_TEAM);
-            sendMessageToPeers(bt, true/*reliable*/);
-            delete bt;
+            if (event)
+            {
+                NetworkString* bt = getNetworkString();
+                bt->setSynchronous(true);
+                bt->addUInt8(LE_BAD_TEAM);
+                event->getPeer()->sendPacket(bt, true/*reliable*/);
+                delete bt;
+            }
             return;
         }
     }
@@ -1151,6 +1154,8 @@ void ServerLobby::computeNewRankings()
     {
         scores_change.push_back(0.0);
 
+        World* w = World::getWorld();
+        assert(w);
         double player1_scores = new_scores[i];
         // If the player has quitted before the race end,
         // the value will be incorrect, but it will not be used
@@ -1169,7 +1174,8 @@ void ServerLobby::computeNewRankings()
             double ranking_importance = 0.0;
 
             // No change between two quitting players
-            if (!players[i] && !players[j])
+            if (w->getKart(i)->isEliminated() &&
+                w->getKart(j)->isEliminated())
                 continue;
 
             double player2_scores = new_scores[j];
@@ -1187,13 +1193,13 @@ void ServerLobby::computeNewRankings()
 
             double mode_factor = getModeFactor();
 
-            if (!players[i])
+            if (w->getKart(i)->isEliminated())
             {
                 result = 0.0;
                 ranking_importance = mode_factor *
                     scalingValueForTime(MAX_SCALING_TIME) * player_factors;
             }
-            else if (!players[j])
+            else if (w->getKart(j)->isEliminated())
             {
                 result = 1.0;
                 ranking_importance = mode_factor *
@@ -1530,7 +1536,7 @@ void ServerLobby::connectionRequested(Event* event)
         peer->getAddress().isLAN()) &&
         NetworkConfig::get()->isWAN() &&
         ServerConfig::m_validating_player) ||
-        (ServerConfig::m_ranked &&
+        (ServerConfig::m_strict_players &&
         (player_count != 1 || online_id == 0 || duplicated_ranked_player)))
     {
         NetworkString* message = getNetworkString(2);
@@ -2023,7 +2029,7 @@ std::pair<int, float> ServerLobby::getHitCaptureLimit(float num_karts)
         if (ServerConfig::m_hit_limit_threshold > 0.0f)
         {
             float val = fminf(num_karts *
-                ServerConfig::m_hit_limit_threshold, 40.0f);
+                ServerConfig::m_hit_limit_threshold, 30.0f);
             hit_capture_limit = (int)val;
             if (hit_capture_limit == 0)
                 hit_capture_limit = 1;
@@ -2324,9 +2330,9 @@ void ServerLobby::configPeersStartTime()
         }
         max_ping = std::max(peer->getAveragePing(), max_ping);
     }
-    // Start up time will be after 2000ms, so even if this packet is sent late
+    // Start up time will be after 2500ms, so even if this packet is sent late
     // (due to packet loss), the start time will still ahead of current time
-    uint64_t start_time = STKHost::get()->getNetworkTimer() + (uint64_t)2000;
+    uint64_t start_time = STKHost::get()->getNetworkTimer() + (uint64_t)2500;
     NetworkString* ns = getNetworkString(10);
     ns->addUInt8(LE_START_RACE).addUInt64(start_time);
     sendMessageToPeers(ns, /*reliable*/true);
@@ -2341,6 +2347,7 @@ void ServerLobby::configPeersStartTime()
     delete ns;
     m_state = WAIT_FOR_RACE_STARTED;
 
+    World::getWorld()->setPhase(WorldStatus::SERVER_READY_PHASE);
     joinStartGameThread();
     m_start_game_thread = std::thread([start_time, this]()
         {
