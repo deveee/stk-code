@@ -515,7 +515,9 @@ public:
     unsigned int getNumberOfKarts() const {return m_num_karts; }
     // ------------------------------------------------------------------------
     unsigned int getNumberOfAIKarts() const
-                                    { return (unsigned)m_ai_kart_list.size(); }
+    {
+        return (unsigned int)m_ai_kart_list.size(); 
+    }   // getNumberOfAIKarts
     // ------------------------------------------------------------------------
     unsigned int getNumNonGhostKarts() const
                                     { return m_num_karts - m_num_ghost_karts; }

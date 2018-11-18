@@ -11,7 +11,7 @@
 
   <!-- Minimum and maxium server versions that be be read by this binary.
        Older versions will be ignored. -->
-  <server-version min="3" max="3"/>
+  <server-version min="4" max="4"/>
 
   <!-- Maximum number of karts to be used at the same time. This limit
        can easily be increased, but some tracks might not have valid start
@@ -170,7 +170,7 @@
   <near-ground distance="2"/>
 
   <!-- How long the end animation will be shown. -->
-  <delay-finish time="0.5"/>
+  <delay-finish time="1.0"/>
 
   <!-- How long the music credits are shown. -->
   <credits music="10"/>
@@ -547,5 +547,18 @@
        The server discovery port has to be the same across all clients and servers.
   -->
   <network-ports server-discovery-port="2757" client-port="2758" server-port="2759"/>
+
+  <!-- Configurable values used in SmoothNetworkBody class:
+       min-adjust-length and max-adjust-length: Error in length smaller or larger
+       than this value will be ignored (ie show the real position).
+       min-adjust-speed: Minimum linear velocity required by a body to have smoothing.
+       max-adjust-time: Maximum time spent in each smoothing stage.
+       adjust-length-threshold: The higher this value, the larger the correction curve.
+  -->
+  <network-smoothing min-adjust-length="0.05"
+                     max-adjust-length="4.0"
+                     min-adjust-speed="0.3"
+                     max-adjust-time="2.0"
+                     adjust-length-threshold="4.0"/>
 
 </config>
