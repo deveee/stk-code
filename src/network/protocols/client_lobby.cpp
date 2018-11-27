@@ -26,6 +26,7 @@
 #include "guiengine/screen_keyboard.hpp"
 #include "input/device_manager.hpp"
 #include "items/item_manager.hpp"
+#include "items/powerup_manager.hpp"
 #include "karts/kart_properties_manager.hpp"
 #include "modes/linear_world.hpp"
 #include "network/crypto.hpp"
@@ -74,6 +75,7 @@ engine.
 ClientLobby::ClientLobby(const TransportAddress& a, std::shared_ptr<Server> s)
            : LobbyProtocol(NULL)
 {
+    m_auto_started = false;
     m_waiting_for_game = false;
     m_server_auto_game_time = false;
     m_received_server_result = false;
@@ -120,6 +122,7 @@ void ClientLobby::clearPlayers()
 void ClientLobby::setup()
 {
     clearPlayers();
+    m_auto_back_to_lobby_time = std::numeric_limits<uint64_t>::max();
     m_received_server_result = false;
     TracksScreen::getInstance()->resetVote();
     LobbyProtocol::setup();
@@ -273,7 +276,7 @@ void ClientLobby::addAllPlayers(Event* event)
     }
     uint32_t random_seed = data.getUInt32();
     ItemManager::updateRandomSeed(random_seed);
-    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE)
+    if (race_manager->isBattleMode())
     {
         int hit_capture_limit = data.getUInt32();
         float time_limit = data.getFloat();
@@ -362,12 +365,19 @@ void ClientLobby::update(int ticks)
         if (!m_received_server_result)
         {
             m_received_server_result = true;
+            m_auto_back_to_lobby_time = StkTime::getRealTimeMs() + 5000;
             // In case someone opened paused race dialog or menu in network game
             GUIEngine::ModalDialog::dismiss();
             GUIEngine::ScreenKeyboard::dismiss();
             if (StateManager::get()->getGameState() == GUIEngine::INGAME_MENU)
                 StateManager::get()->enterGameState();
             World::getWorld()->enterRaceOverState();
+        }
+        if (NetworkConfig::get()->isAutoConnect() &&
+            StkTime::getRealTimeMs() > m_auto_back_to_lobby_time)
+        {
+            m_auto_back_to_lobby_time = std::numeric_limits<uint64_t>::max();
+            doneWithResults();
         }
         break;
     case DONE:
@@ -376,10 +386,10 @@ void ClientLobby::update(int ticks)
         break;
     case REQUESTING_CONNECTION:
     case CONNECTED:
-        if (STKHost::get()->isAuthorisedToControl() &&
-            NetworkConfig::get()->isAutoConnect())
+        if (NetworkConfig::get()->isAutoConnect() && !m_auto_started)
         {
             // Send a message to the server to start
+            m_auto_started = true;
             NetworkString start(PROTOCOL_LOBBY_ROOM);
             start.addUInt8(LobbyProtocol::LE_REQUEST_BEGIN);
             STKHost::get()->sendToServer(&start, true);
@@ -457,21 +467,19 @@ void ClientLobby::displayPlayerVote(Event* event)
     core::stringw yes = _("Yes");
     core::stringw no = _("No");
     core::stringw vote_msg;
-    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE &&
-        race_manager->getMajorMode() == RaceManager::MAJOR_MODE_FREE_FOR_ALL)
+    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_FREE_FOR_ALL)
     {
         //I18N: Vote message in network game from a player
         vote_msg = _("Track: %s,\nrandom item location: %s",
             track_readable, rev == 1 ? yes : no);
     }
-    else if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE &&
-        race_manager->getMajorMode() ==
-        RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG)
+    else if (race_manager->getMinorMode() ==
+             RaceManager::MINOR_MODE_CAPTURE_THE_FLAG)
     {
         //I18N: Vote message in network game from a player
         vote_msg = _("Track: %s", track_readable);
     }
-    else if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
+    else if (race_manager->isSoccerMode())
     {
         if (m_game_setup->isSoccerGoalTarget())
         {
@@ -558,6 +566,7 @@ void ClientLobby::connectionAccepted(Event* event)
     uint32_t server_version = data.getUInt32();
     NetworkConfig::get()->setJoinedServerVersion(server_version);
     assert(server_version != 0);
+    m_auto_started = false;
     m_state.store(CONNECTED);
     float auto_start_timer = data.getFloat();
     if (auto_start_timer != std::numeric_limits<float>::max())
@@ -597,13 +606,8 @@ void ClientLobby::handleServerInfo(Event* event)
     ServerConfig::m_server_mode = u_data;
     auto game_mode = ServerConfig::getLocalGameMode();
     race_manager->setMinorMode(game_mode.first);
-    if (game_mode.first == RaceManager::MINOR_MODE_BATTLE)
-        race_manager->setMajorMode(game_mode.second);
-    else
-    {
-        // We use single mode in network even it's grand prix
-        race_manager->setMajorMode(RaceManager::MAJOR_MODE_SINGLE);
-    }
+    // We use single mode in network even it's grand prix
+    race_manager->setMajorMode(RaceManager::MAJOR_MODE_SINGLE);
 
     //I18N: In the networking lobby
     core::stringw mode_name = ServerConfig::getModeName(u_data);
@@ -813,6 +817,7 @@ void ClientLobby::startGame(Event* event)
 {
     World::getWorld()->setPhase(WorldStatus::SERVER_READY_PHASE);
     uint64_t start_time = event->data().getUInt64();
+    powerup_manager->setRandomSeed(start_time);
     joinStartGameThread();
     m_start_game_thread = std::thread([start_time, this]()
         {
@@ -936,8 +941,9 @@ void ClientLobby::exitResultScreen(Event *event)
     // In case the user opened a user info dialog
     GUIEngine::ModalDialog::dismiss();
     GUIEngine::ScreenKeyboard::dismiss();
-    
+
     setup();
+    m_auto_started = false;
     m_state.store(CONNECTED);
     RaceResultGUI::getInstance()->backToLobby();
 }   // exitResultScreen

@@ -146,11 +146,11 @@ void GameSetup::loadWorld()
     if (PlayerManager::getCurrentPlayer())
         PlayerManager::getCurrentPlayer()->setCurrentChallenge("");
     race_manager->setTimeTarget(0.0f);
-    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER ||
-        race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE)
+    if (race_manager->isSoccerMode() ||
+        race_manager->isBattleMode())
     {
-        const bool is_ctf = race_manager->getMajorMode() ==
-            RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG;
+        const bool is_ctf = race_manager->getMinorMode() ==
+            RaceManager::MINOR_MODE_CAPTURE_THE_FLAG;
         bool prev_val = UserConfigParams::m_random_arena_item;
         if (is_ctf)
             UserConfigParams::m_random_arena_item = false;
@@ -158,7 +158,7 @@ void GameSetup::loadWorld()
             UserConfigParams::m_random_arena_item = m_reverse;
 
         race_manager->setReverseTrack(false);
-        if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
+        if (race_manager->isSoccerMode())
         {
             if (isSoccerGoalTarget())
                 race_manager->setMaxGoal(m_laps);
@@ -265,19 +265,25 @@ void GameSetup::sortPlayersForGrandPrix()
 }   // sortPlayersForGrandPrix
 
 //-----------------------------------------------------------------------------
-void GameSetup::sortPlayersForTeamGame()
+void GameSetup::sortPlayersForGame()
 {
+    std::lock_guard<std::mutex> lock(m_players_mutex);
+    if (!isGrandPrix())
+    {
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(m_players.begin(), m_players.end(), g);
+    }
     if (!race_manager->teamEnabled() ||
         ServerConfig::m_team_choosing)
         return;
-    std::lock_guard<std::mutex> lock(m_players_mutex);
     for (unsigned i = 0; i < m_players.size(); i++)
     {
         auto player = m_players[i].lock();
         assert(player);
         player->setTeam((KartTeam)(i % 2));
     }
-}   // sortPlayersForTeamGame
+}   // sortPlayersForGame
 
 // ----------------------------------------------------------------------------
 std::pair<int, int> GameSetup::getPlayerTeamInfo() const

@@ -458,6 +458,7 @@ void NetworkingLobby::tearDown()
     if (!NetworkConfig::get()->isClient())
         return;
     input_manager->getDeviceManager()->mapFireToSelect(false);
+    input_manager->getDeviceManager()->setAssignMode(NO_ASSIGN);
 }   // tearDown
 
 // ----------------------------------------------------------------------------
@@ -467,6 +468,7 @@ bool NetworkingLobby::onEscapePressed()
         NetworkConfig::get()->cleanNetworkPlayers();
     m_joined_server.reset();
     input_manager->getDeviceManager()->mapFireToSelect(false);
+    input_manager->getDeviceManager()->setAssignMode(NO_ASSIGN);
     STKHost::get()->shutdown();
     return true; // close the screen
 }   // onEscapePressed

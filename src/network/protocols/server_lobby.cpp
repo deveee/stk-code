@@ -20,8 +20,10 @@
 
 #include "config/user_config.hpp"
 #include "items/item_manager.hpp"
+#include "items/powerup_manager.hpp"
 #include "karts/abstract_kart.hpp"
 #include "karts/controller/player_controller.hpp"
+#include "karts/kart_properties.hpp"
 #include "karts/kart_properties_manager.hpp"
 #include "modes/linear_world.hpp"
 #include "network/crypto.hpp"
@@ -93,6 +95,30 @@
  */
 ServerLobby::ServerLobby() : LobbyProtocol(NULL)
 {
+    std::vector<int> all_k =
+        kart_properties_manager->getKartsInGroup("standard");
+    std::vector<int> all_t =
+        track_manager->getTracksInGroup("standard");
+    std::vector<int> all_arenas =
+        track_manager->getArenasInGroup("standard", false);
+    std::vector<int> all_soccers =
+        track_manager->getArenasInGroup("standard", true);
+    all_t.insert(all_t.end(), all_arenas.begin(), all_arenas.end());
+    all_t.insert(all_t.end(), all_soccers.begin(), all_soccers.end());
+
+    for (int kart : all_k)
+    {
+        const KartProperties* kp = kart_properties_manager->getKartById(kart);
+        if (!kp->isAddon())
+            m_official_kts.first.insert(kp->getIdent());
+    }
+    for (int track : all_t)
+    {
+        Track* t = track_manager->getTrack(track);
+        if (!t->isAddon())
+            m_official_kts.second.insert(t->getIdent());
+    }
+
     m_last_success_poll_time.store(StkTime::getRealTimeMs() + 30000);
     m_waiting_players_counts.store(0);
     m_server_owner_id.store(-1);
@@ -175,14 +201,15 @@ void ServerLobby::setup()
             }
             break;
         }
-        case RaceManager::MINOR_MODE_BATTLE:
+        case RaceManager::MINOR_MODE_FREE_FOR_ALL:
+        case RaceManager::MINOR_MODE_CAPTURE_THE_FLAG:
         {
             auto it = m_available_kts.second.begin();
             while (it != m_available_kts.second.end())
             {
                 Track* t =  track_manager->getTrack(*it);
-                if (race_manager->getMajorMode() ==
-                    RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG)
+                if (race_manager->getMinorMode() ==
+                    RaceManager::MINOR_MODE_CAPTURE_THE_FLAG)
                 {
                     if (!t->isCTF() || t->isInternal())
                     {
@@ -508,7 +535,7 @@ void ServerLobby::asynchronousUpdate()
             // Remove disconnected player (if any) one last time
             m_game_setup->update(true);
             m_game_setup->sortPlayersForGrandPrix();
-            m_game_setup->sortPlayersForTeamGame();
+            m_game_setup->sortPlayersForGame();
             auto players = m_game_setup->getConnectedPlayers();
             for (auto& player : players)
                 player->getPeer()->clearAvailableKartIDs();
@@ -541,7 +568,7 @@ void ServerLobby::asynchronousUpdate()
             uint32_t random_seed = (uint32_t)StkTime::getTimeSinceEpoch();
             ItemManager::updateRandomSeed(random_seed);
             load_world->addUInt32(random_seed);
-            if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE)
+            if (race_manager->isBattleMode())
             {
                 auto hcl = getHitCaptureLimit((float)players.size());
                 load_world->addUInt32(hcl.first).addFloat(hcl.second);
@@ -904,8 +931,7 @@ void ServerLobby::startSelection(const Event *event)
         m_available_kts.second.erase(track_erase);
     }
 
-    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_BATTLE &&
-        race_manager->getMajorMode() == RaceManager::MAJOR_MODE_FREE_FOR_ALL)
+    if (race_manager->getMinorMode() == RaceManager::MINOR_MODE_FREE_FOR_ALL)
     {
         auto it = m_available_kts.second.begin();
         while (it != m_available_kts.second.end())
@@ -1458,6 +1484,23 @@ void ServerLobby::connectionRequested(Event* event)
 
     // Drop this player if he doesn't have at least 1 kart / track the same
     // as server
+    float okt = 0.0f;
+    float ott = 0.0f;
+    for (auto& client_kart : client_karts)
+    {
+        if (m_official_kts.first.find(client_kart) !=
+            m_official_kts.first.end())
+            okt += 1.0f;
+    }
+    okt = okt / (float)m_official_kts.first.size();
+    for (auto& client_track : client_tracks)
+    {
+        if (m_official_kts.second.find(client_track) !=
+            m_official_kts.second.end())
+            ott += 1.0f;
+    }
+    ott = ott / (float)m_official_kts.second.size();
+
     std::set<std::string> karts_erase, tracks_erase;
     for (const std::string& server_kart : m_available_kts.first)
     {
@@ -1475,7 +1518,9 @@ void ServerLobby::connectionRequested(Event* event)
     }
 
     if (karts_erase.size() == m_available_kts.first.size() ||
-        tracks_erase.size() == m_available_kts.second.size())
+        tracks_erase.size() == m_available_kts.second.size() ||
+        okt < ServerConfig::m_official_karts_threshold ||
+        ott < ServerConfig::m_official_tracks_threshold)
     {
         NetworkString *message = getNetworkString(2);
         message->setSynchronous(true);
@@ -1618,7 +1663,7 @@ void ServerLobby::handleUnencryptedConnection(std::shared_ptr<STKPeer> peer,
     }
 
     unsigned player_count = data.getUInt8();
-    auto red_blue = m_game_setup->getPlayerTeamInfo();
+    auto red_blue = STKHost::get()->getAllPlayersTeamInfo();
     for (unsigned i = 0; i < player_count; i++)
     {
         core::stringw name;
@@ -1986,7 +2031,8 @@ std::tuple<std::string, uint8_t, bool, bool> ServerLobby::handleVote()
     auto track_vote = tracks.begin();
     for (auto c_vote = tracks.begin(); c_vote != tracks.end(); c_vote++)
     {
-        if (c_vote->second > vote)
+        if (c_vote->second > vote ||
+            (c_vote->second >= vote && rg.get(2) == 0))
         {
             vote = c_vote->second;
             track_vote = c_vote;
@@ -2002,7 +2048,8 @@ std::tuple<std::string, uint8_t, bool, bool> ServerLobby::handleVote()
     auto lap_vote = laps.begin();
     for (auto c_vote = laps.begin(); c_vote != laps.end(); c_vote++)
     {
-        if (c_vote->second > vote)
+        if (c_vote->second > vote ||
+            (c_vote->second >= vote && rg.get(2) == 0))
         {
             vote = c_vote->second;
             lap_vote = c_vote;
@@ -2018,7 +2065,8 @@ std::tuple<std::string, uint8_t, bool, bool> ServerLobby::handleVote()
     auto reverse_vote = reverses.begin();
     for (auto c_vote = reverses.begin(); c_vote != reverses.end(); c_vote++)
     {
-        if (c_vote->second > vote)
+        if (c_vote->second > vote ||
+            (c_vote->second >= vote && rg.get(2) == 0))
         {
             vote = c_vote->second;
             reverse_vote = c_vote;
@@ -2041,8 +2089,8 @@ std::pair<int, float> ServerLobby::getHitCaptureLimit(float num_karts)
     // Read user_config.hpp for formula
     int hit_capture_limit = std::numeric_limits<int>::max();
     float time_limit = 0.0f;
-    if (race_manager->getMajorMode() ==
-        RaceManager::MAJOR_MODE_CAPTURE_THE_FLAG)
+    if (race_manager->getMinorMode() ==
+        RaceManager::MINOR_MODE_CAPTURE_THE_FLAG)
     {
         if (ServerConfig::m_capture_limit_threshold > 0.0f)
         {
@@ -2366,6 +2414,7 @@ void ServerLobby::configPeersStartTime()
     // Start up time will be after 2500ms, so even if this packet is sent late
     // (due to packet loss), the start time will still ahead of current time
     uint64_t start_time = STKHost::get()->getNetworkTimer() + (uint64_t)2500;
+    powerup_manager->setRandomSeed(start_time);
     NetworkString* ns = getNetworkString(10);
     ns->addUInt8(LE_START_RACE).addUInt64(start_time);
     sendMessageToPeers(ns, /*reliable*/true);
