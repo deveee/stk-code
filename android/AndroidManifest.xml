@@ -18,6 +18,7 @@
         <activity android:name="android.app.NativeActivity"
                   android:label="@string/app_name"
                   android:configChanges="fontScale|keyboard|keyboardHidden|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|uiMode"
+                  android:launchMode="singleTask"
                   android:screenOrientation="sensorLandscape">
 
             <!-- Tell NativeActivity the name of or .so -->
