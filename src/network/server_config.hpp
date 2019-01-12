@@ -206,7 +206,8 @@ namespace ServerConfig
     SERVER_CFG_PREFIX BoolServerConfigParam m_team_choosing
         SERVER_CFG_DEFAULT(BoolServerConfigParam(true, "team-choosing",
         "Enable team choosing in lobby in team game (soccer and CTF). "
-        "If owner-less is enabled, than this option is always disabled."));
+        "If owner-less is enabled and live-players is not enabled, than this "
+        "option is always disabled."));
 
     SERVER_CFG_PREFIX BoolServerConfigParam m_strict_players
         SERVER_CFG_DEFAULT(BoolServerConfigParam(false, "strict-players",
@@ -228,6 +229,14 @@ namespace ServerConfig
         "grand prix server, and will be automatically turned on if the server "
         "was created using the in-game GUI. The changed difficulty and game "
         "mode will not be saved in this config file."));
+
+    SERVER_CFG_PREFIX BoolServerConfigParam m_live_players
+        SERVER_CFG_DEFAULT(BoolServerConfigParam(false, "live-players",
+        "If true, players can live join or spectate the in-progress game. "
+        "Currently this feature is only available if the current game mode "
+        "used in server is FFA, CTF or soccer, also no addon karts will be "
+        "available for players to choose, and official-karts-threshold will "
+        "be made 1.0."));
 
     SERVER_CFG_PREFIX FloatServerConfigParam m_flag_return_timemout
         SERVER_CFG_DEFAULT(FloatServerConfigParam(20.0f, "flag-return-timemout",
@@ -276,11 +285,13 @@ namespace ServerConfig
 
     SERVER_CFG_PREFIX IntServerConfigParam m_max_ping
         SERVER_CFG_DEFAULT(IntServerConfigParam(300, "max-ping",
-        "Maximum ping allowed for a player (in ms)."));
+        "Maximum ping allowed for a player (in ms), it's recommended to use "
+        "default value if live-players is on."));
 
     SERVER_CFG_PREFIX IntServerConfigParam m_jitter_tolerance
         SERVER_CFG_DEFAULT(IntServerConfigParam(100, "jitter-tolerance",
-        "Tolerance of jitter in network allowed (in ms)."));
+        "Tolerance of jitter in network allowed (in ms), it's recommended to "
+        "use default value if live-players is on."));
 
     SERVER_CFG_PREFIX BoolServerConfigParam m_kick_high_ping_players
         SERVER_CFG_DEFAULT(BoolServerConfigParam(false,

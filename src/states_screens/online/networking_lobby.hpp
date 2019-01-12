@@ -72,12 +72,19 @@ private:
     std::vector<core::stringw> m_server_info;
     int m_server_info_height;
 
+    core::stringw m_start_text, m_ready_text, m_live_join_text,
+        m_configuration_text, m_spectate_text;
+
     float m_start_timeout;
     int64_t m_cur_starting_timer;
     unsigned m_min_start_game_players;
 
     bool m_allow_change_team, m_has_auto_start_in_server,
-        m_server_configurable;
+        m_server_configurable, m_server_live_joinable,
+        m_client_live_joinable;
+
+    video::ITexture* m_config_texture;
+    video::ITexture* m_spectate_texture;
 
     GUIEngine::IconButtonWidget* m_back_widget;
     GUIEngine::LabelWidget* m_header;
@@ -145,6 +152,7 @@ public:
                             float start_timeout, unsigned server_max_player);
     void setStartingTimerTo(float t);
     void toggleServerConfigButton(bool val)    { m_server_configurable = val; }
+    void toggleServerLiveJoinable(bool val)   { m_server_live_joinable = val; }
 };   // class NetworkingLobby
 
 #endif

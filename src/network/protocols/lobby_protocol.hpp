@@ -24,6 +24,8 @@
 class GameSetup;
 class NetworkPlayerProfile;
 class PeerVote;
+class RemoteKartInfo;
+class Track;
 
 #include <atomic>
 #include <cassert>
@@ -44,30 +46,34 @@ public:
     /** Lists all lobby events (LE). */
     enum : uint8_t
     {
-        LE_CONNECTION_REQUESTED   = 1,    // a connection to the server
-        LE_CONNECTION_REFUSED,            // Connection to server refused
-        LE_CONNECTION_ACCEPTED,           // Connection to server accepted
-        LE_SERVER_INFO,                   // inform client about server info
-        LE_REQUEST_BEGIN,                 // begin of kart selection
-        LE_UPDATE_PLAYER_LIST,            // inform client about player list update
-        LE_KART_SELECTION,                // Player selected kart
-        LE_PLAYER_DISCONNECTED,           // Client disconnected
-        LE_CLIENT_LOADED_WORLD,           // Client finished loading world
-        LE_LOAD_WORLD,                    // Clients should load world
-        LE_START_RACE,                    // Server to client to start race
-        LE_START_SELECTION,               // inform client to start selection
-        LE_RACE_FINISHED,                 // race has finished, display result
-        LE_RACE_FINISHED_ACK,             // client went back to lobby
-        LE_EXIT_RESULT,                   // Force clients to exit race result screen
-        LE_VOTE,                          // Track vote
-        LE_CHAT,
-        LE_SERVER_OWNERSHIP,
-        LE_KICK_HOST,
-        LE_CHANGE_TEAM,
-        LE_BAD_TEAM,
-        LE_BAD_CONNECTION,
-        LE_CONFIG_SERVER,
-        LE_CHANGE_HANDICAP
+        LE_CONNECTION_REQUESTED = 1, // a connection to the server
+        LE_CONNECTION_REFUSED, // Connection to server refused
+        LE_CONNECTION_ACCEPTED, // Connection to server accepted
+        LE_SERVER_INFO, // inform client about server info
+        LE_REQUEST_BEGIN, // begin of kart selection
+        LE_UPDATE_PLAYER_LIST, // inform client about player list update
+        LE_KART_SELECTION, // Player selected kart
+        LE_PLAYER_DISCONNECTED, // Client disconnected
+        LE_CLIENT_LOADED_WORLD, // Client finished loading world
+        LE_LOAD_WORLD, // Clients should load world
+        LE_START_RACE, // Server to client to start race
+        LE_START_SELECTION, // inform client to start selection
+        LE_RACE_FINISHED, // race has finished, display result
+        LE_RACE_FINISHED_ACK, // client went back to lobby
+        LE_BACK_LOBBY, // Force clients to go back to lobby
+        LE_VOTE, // Track vote
+        LE_CHAT, // Client chat message
+        LE_SERVER_OWNERSHIP, // Tell client he is now the server owner
+        LE_KICK_HOST, // Server owner kicks some other peer in game
+        LE_CHANGE_TEAM, // Client wants to change his team
+        LE_BAD_TEAM, // Tell server owner that the team is unbalanced
+        LE_BAD_CONNECTION, // High ping or too many packets loss
+        LE_CONFIG_SERVER, // Server owner config server game mode or difficulty
+        LE_CHANGE_HANDICAP, // Client changes handicap
+        LE_LIVE_JOIN, // Client live join or spectate
+        LE_LIVE_JOIN_ACK, // Server tell client live join or spectate succeed
+        LE_KART_INFO, // Client or server exchange new kart info
+        LE_CLIENT_BACK_LOBBY // Client tell server to go back lobby
     };
 
     enum RejectReason : uint8_t
@@ -78,6 +84,14 @@ public:
         RR_INCOMPATIBLE_DATA = 3,
         RR_TOO_MANY_PLAYERS = 4,
         RR_INVALID_PLAYER = 5
+    };
+
+    enum BackLobbyReason : uint8_t
+    {
+        BLR_NONE = 0,
+        BLR_NO_GAME_FOR_LIVE_JOIN = 1,
+        BLR_NO_PLACE_FOR_LIVE_JOIN = 2,
+        BLR_ONE_PLAYER_IN_RANKED_MATCH = 3
     };
 
 protected:
@@ -103,6 +117,13 @@ protected:
       * uint32_t max if not available. */
     std::atomic<uint32_t> m_estimated_progress;
 
+    /** Save the last live join ticks, for physical objects to update current
+      * transformation in server, and reset smooth network body in client. */
+    int m_last_live_join_util_ticks;
+
+    /** Store current playing track in id. */
+    std::atomic<int> m_current_track;
+
     /** Stores data about the online game to play. */
     GameSetup* m_game_setup;
 
@@ -115,6 +136,9 @@ protected:
         if (m_start_game_thread.joinable())
             m_start_game_thread.join();
     }
+    // ------------------------------------------------------------------------
+    void addLiveJoiningKart(int kart_id, const RemoteKartInfo& rki,
+                            int live_join_util_ticks) const;
 public:
 
     /** Creates either a client or server lobby protocol as a singleton. */
@@ -190,6 +214,12 @@ public:
         m_estimated_remaining_time.store(std::numeric_limits<uint32_t>::max());
         m_estimated_progress.store(std::numeric_limits<uint32_t>::max());
     }
+    // ------------------------------------------------------------------------
+    bool hasLiveJoiningRecently() const;
+    // ------------------------------------------------------------------------
+    void storePlayingTrack(int track_id)   { m_current_track.store(track_id); }
+    // ------------------------------------------------------------------------
+    Track* getPlayingTrack() const;
 };   // class LobbyProtocol
 
 #endif // LOBBY_PROTOCOL_HPP

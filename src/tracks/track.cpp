@@ -550,7 +550,6 @@ void Track::loadTrackInfo()
     root->get("version",               &m_version);
     std::vector<std::string> filenames;
     root->get("music",                 &filenames);
-    getMusicInformation(filenames, m_music);
     root->get("screenshot",            &m_screenshot);
     root->get("gravity",               &m_gravity);
     root->get("friction",              &m_friction);
@@ -573,6 +572,7 @@ void Track::loadTrackInfo()
     root->get("color-level-in",        &m_color_inlevel);
     root->get("color-level-out",       &m_color_outlevel);
 
+    getMusicInformation(filenames, m_music);
     if (m_default_number_of_laps <= 0)
         m_default_number_of_laps = 3;
     m_actual_number_of_laps = m_default_number_of_laps;
@@ -701,6 +701,15 @@ void Track::getMusicInformation(std::vector<std::string>&       filenames,
                       filenames[i].c_str(), m_name.c_str());
 
     }   // for i in filenames
+
+    if (m_music.empty() && !isInternal() && !m_is_cutscene)
+    {
+        m_music.push_back(stk_config->m_default_music);
+
+        Log::warn("track",
+            "Music information for track '%s' replaced by default music.\n",
+            m_name.c_str());
+    }
 
 }   // getMusicInformation
 
