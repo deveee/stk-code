@@ -195,6 +195,7 @@ namespace irr
         xdg_toplevel* m_xdg_toplevel;
         bool m_has_xdg_wm_base;
         bool m_surface_configured;
+        bool m_fullscreen_configured;
         uint32_t m_xdg_wm_base_name;
         
         zxdg_decoration_manager_v1* m_decoration_manager;

@@ -607,11 +607,11 @@ public:
         CIrrDeviceWayland* device = static_cast<CIrrDeviceWayland*>(data);
 
         device->VideoModeList.addMode(core::dimension2du(width, height), 24);
-
+        
         if (flags & WL_OUTPUT_MODE_CURRENT)
         {
-            device->VideoModeList.setDesktop(24, core::dimension2du(width,
-                                                                    height));
+            device->VideoModeList.setDesktop(24, core::dimension2du(99999,
+                                                                    99999));
         }
     }
 
@@ -653,23 +653,35 @@ public:
                                        int32_t width, int32_t height,
                                        wl_array* states)
     {
-        //void* state_p;
+        CIrrDeviceWayland* device = static_cast<CIrrDeviceWayland*>(data);
         
-        //wl_array_for_each(state_p, states) 
-        //{
-        //    uint32_t state = *(uint32_t*)state_p;
-        //    
-        //    switch (state) 
-        //    {
-        //    case ZXDG_TOPLEVEL_V6_STATE_FULLSCREEN:
-        //    case ZXDG_TOPLEVEL_V6_STATE_MAXIMIZED:
-        //    case ZXDG_TOPLEVEL_V6_STATE_ACTIVATED:
-        //    case ZXDG_TOPLEVEL_V6_STATE_RESIZING:
-        //        break;
-        //    default:
-        //        break;
-        //    }
-        //}
+        void* state_p;
+        
+        wl_array_for_each(state_p, states) 
+        {
+            uint32_t state = *(uint32_t*)state_p;
+            
+            switch (state) 
+            {
+            case XDG_TOPLEVEL_STATE_FULLSCREEN:
+            {
+                if (!device->m_fullscreen_configured && 
+                    width > 0 && height > 0)
+                {
+                    device->m_width = width;
+                    device->m_height = height;
+                    device->m_fullscreen_configured = true;
+                }
+                break;
+            }
+            case XDG_TOPLEVEL_STATE_MAXIMIZED:
+            case XDG_TOPLEVEL_STATE_ACTIVATED:
+            case XDG_TOPLEVEL_STATE_RESIZING:
+                break;
+            default:
+                break;
+            }
+        }
     }
     
     static void xdg_toplevel_close(void* data, xdg_toplevel* xdg_toplevel)
@@ -858,6 +870,7 @@ CIrrDeviceWayland::CIrrDeviceWayland(const SIrrlichtCreationParameters& params)
     m_xdg_toplevel = NULL;
     m_has_xdg_wm_base = false;
     m_surface_configured = false;
+    m_fullscreen_configured = false;
     m_xdg_wm_base_name = 0;
     
     m_decoration_manager = NULL;
@@ -1125,14 +1138,6 @@ bool CIrrDeviceWayland::createWindow()
 {
     m_surface = wl_compositor_create_surface(m_compositor);
     
-    bool success = initEGL();
-
-    if (!success)
-    {
-        os::Printer::log("Couldn't create OpenGL context.", ELL_ERROR);
-        return false;
-    }
-
     if (m_xdg_wm_base != NULL)
     {
         m_xdg_surface = xdg_wm_base_get_xdg_surface(m_xdg_wm_base, m_surface);
@@ -1146,18 +1151,22 @@ bool CIrrDeviceWayland::createWindow()
                                   &WaylandCallbacks::toplevel_listener, this);
 
         wl_surface_commit(m_surface);
-                                    
-        if (CreationParams.Fullscreen)
-        {
-            xdg_toplevel_set_fullscreen(m_xdg_toplevel, NULL);
-        }
-        
-        xdg_surface_set_window_geometry(m_xdg_surface, 0, 0, m_width, m_height);
-                                    
+  
         while (!m_surface_configured)
         {
             wl_display_dispatch(m_display);
             usleep(1000);
+        }
+                                          
+        if (CreationParams.Fullscreen)
+        {
+            xdg_toplevel_set_fullscreen(m_xdg_toplevel, NULL);
+            
+            while (!m_fullscreen_configured)
+            {
+                wl_display_dispatch(m_display);
+                usleep(1000);
+            }
         }
         
         if (m_decoration_manager != NULL)
@@ -1193,6 +1202,14 @@ bool CIrrDeviceWayland::createWindow()
     else
     {
         os::Printer::log("Cannot create shell surface.", ELL_ERROR);
+        return false;
+    }
+
+    bool success = initEGL();
+
+    if (!success)
+    {
+        os::Printer::log("Couldn't create OpenGL context.", ELL_ERROR);
         return false;
     }
 
