@@ -507,7 +507,7 @@ std::shared_ptr<AbstractKart> World::createKart
         // local_player_id >= local_player_count for fixed AI defined in create
         // server screen
         if (NetworkConfig::get()->isNetworkAIInstance() ||
-            local_player_id >= local_player_count)
+            local_player_id >= 1)
         {
             AIBaseController* ai = NULL;
             if (RaceManager::get()->isBattleMode())

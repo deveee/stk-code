@@ -78,9 +78,10 @@ LocalPlayerController::LocalPlayerController(AbstractKart *kart,
     // Keep a pointer to the camera to remove the need to search for
     // the right camera once per frame later.
     m_camera_index = -1;
-    if (!GUIEngine::isNoGraphics())
+    if (!GUIEngine::isNoGraphics() && local_player_id == 0)
     {
-        Camera *camera = Camera::createCamera(kart, local_player_id);
+        Camera *camera = Camera::createCamera(kart, 0, true);
+        Camera::createCamera(kart, 1, false);
         m_camera_index = camera->getIndex();
     }
 
@@ -259,7 +260,7 @@ void LocalPlayerController::update(int ticks)
     // if automatic reverse camera is active
 #ifndef SERVER_ONLY
     Camera *camera = NULL;
-    if (!GUIEngine::isNoGraphics())
+    if (!GUIEngine::isNoGraphics() && m_camera_index != -1)
         camera = Camera::getCamera(m_camera_index);
     if (camera && camera->getType() != Camera::CM_TYPE_END)
     {
@@ -284,6 +285,37 @@ void LocalPlayerController::update(int ticks)
             setParticleEmitterPosition(local_trans);
         }
     }
+    
+    
+    
+    if (!GUIEngine::isNoGraphics() && m_camera_index != -1)
+        camera = Camera::getCamera(m_camera_index+1);
+    if (camera && camera->getType() != Camera::CM_TYPE_END)
+    {
+        if (m_controls->getLookBack() || (UserConfigParams::m_reverse_look_threshold > 0 &&
+            m_kart->getSpeed() < -UserConfigParams::m_reverse_look_threshold))
+            camera->setMode(Camera::CM_REVERSE);
+        else
+        {
+            if (camera->getMode() == Camera::CM_REVERSE)
+                camera->setMode(Camera::CM_NORMAL);
+        }
+        if (m_sky_particles_emitter)
+        {
+            // Need to set it every frame to account for heading changes
+            btTransform local_trans(btQuaternion(Vec3(0, 1, 0), 0),
+                Vec3(0, 30, 100));
+            if (camera->getMode() == Camera::CM_REVERSE)
+            {
+                local_trans = btTransform (btQuaternion(Vec3(0, 1, 0),
+                    180.0 * DEGREE_TO_RAD), Vec3(0, 30, -100));
+            }
+            setParticleEmitterPosition(local_trans);
+        }
+    }
+
+    
+    
 
     if (m_is_above_nitro_target == true &&
         m_kart->getEnergy() < RaceManager::get()->getCoinTarget())
@@ -370,7 +402,10 @@ void LocalPlayerController::finishedRace(float time)
 {
     // This will implicitly trigger setting the first end camera to be active
     if (!GUIEngine::isNoGraphics())
+    {
         Camera::changeCamera(m_camera_index, Camera::CM_TYPE_END);
+        Camera::changeCamera(m_camera_index + 1, Camera::CM_TYPE_END);
+    }
 }   // finishedRace
 
 //-----------------------------------------------------------------------------
@@ -392,7 +427,10 @@ void LocalPlayerController::handleZipper(bool play_sound)
 #ifndef SERVER_ONLY
     // Apply the motion blur according to the speed of the kart
     if (!GUIEngine::isNoGraphics())
+    {
         irr_driver->giveBoost(m_camera_index);
+        irr_driver->giveBoost(m_camera_index + 1);
+    }
 #endif
 
 }   // handleZipper

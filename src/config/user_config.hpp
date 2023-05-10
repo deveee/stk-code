@@ -1019,6 +1019,11 @@ namespace UserConfigParams
                         "camera-normal",
                         "Camera settings for player.") );
 
+    PARAM_PREFIX FloatUserConfigParam         m_camera_offset_x
+            PARAM_DEFAULT(  FloatUserConfigParam(0.15, "camera-offset-x",
+            &m_camera_normal,
+            "Camera offset x"));
+
     PARAM_PREFIX FloatUserConfigParam         m_camera_distance
             PARAM_DEFAULT(  FloatUserConfigParam(1.0, "distance",
             &m_camera_normal,

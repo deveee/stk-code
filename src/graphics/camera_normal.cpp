@@ -115,8 +115,11 @@ void CameraNormal::moveCamera(float dt, bool smooth, float cam_angle, float dist
     float tan_up = 0;
     if (cam_angle > 0) tan_up = tanf(cam_angle) * distance;
 
+    float offset_x = m_left_camera ? UserConfigParams::m_camera_offset_x 
+                                   : -UserConfigParams::m_camera_offset_x;
+    
     // Defines how far camera should be from player kart.
-    Vec3 wanted_camera_offset(camera_distance * sinf(skid_angle / 2),
+    Vec3 wanted_camera_offset(camera_distance * sinf(skid_angle / 2) - offset_x,
         (0.85f + ratio / 2.5f) - tan_up,
         camera_distance * cosf(skid_angle / 2));
 
@@ -154,7 +157,7 @@ void CameraNormal::moveCamera(float dt, bool smooth, float cam_angle, float dist
     m_camera_offset += (wanted_camera_offset - m_camera_offset) * delta;
 
     // next target
-    Vec3 current_target = btt(Vec3(0, 0.5f, 0));
+    Vec3 current_target = btt(Vec3(-offset_x, 0.25f, 0));
     // new required position of camera
     current_position = kart_camera_position_with_offset.toIrrVector();
 

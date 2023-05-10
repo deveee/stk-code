@@ -115,7 +115,7 @@ private:
 
     /** List of all cameras. */
     static std::vector<Camera*> m_all_cameras;
-
+    
 protected:
     /** The camera scene node. */
     scene::ICameraSceneNode *m_camera;
@@ -127,7 +127,7 @@ protected:
     AbstractKart   *m_kart;
 
     static Camera* createCamera(unsigned int index, CameraType type,
-                                AbstractKart* kart);
+                                AbstractKart* kart, bool left_camera);
 
              Camera(CameraType type, int camera_index, AbstractKart* kart);
     virtual ~Camera();
@@ -135,9 +135,15 @@ protected:
 public:
     LEAK_CHECK()
 
+    bool m_left_camera = false;
+
     // ========================================================================
     // Static functions
-    static Camera* createCamera(AbstractKart* kart, const int index);
+    static Camera* createCamera(AbstractKart* kart, const int index, bool left_camera);
+    static Camera* createCamera(AbstractKart* kart, const int index)
+    {
+        return createCamera(kart, index, false);
+    }
     static void resetAllCameras();
     static void changeCamera(unsigned int camera_index, CameraType type);
 

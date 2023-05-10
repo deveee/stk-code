@@ -276,6 +276,8 @@ void RaceGUI::calculateMinimapSize()
  */
 void RaceGUI::renderGlobal(float dt)
 {
+    return;
+    
 #ifndef SERVER_ONLY
     RaceGUIBase::renderGlobal(dt);
     cleanupMessages(dt);

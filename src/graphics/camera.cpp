@@ -53,10 +53,9 @@ Camera::CameraType   Camera::m_default_type  = Camera::CM_TYPE_NORMAL;
  *  camera index (which determines which viewport to use in split screen)
  *  is set.
  */
-Camera* Camera::createCamera(AbstractKart* kart, const int index)
+Camera* Camera::createCamera(AbstractKart* kart, const int index, bool left_camera)
 {
-
-    Camera *camera = createCamera(index, m_default_type, kart);
+    Camera *camera = createCamera(index, m_default_type, kart, left_camera);
     m_all_cameras.push_back(camera);
     std::sort(m_all_cameras.begin(), m_all_cameras.end(),
         [](const Camera* a, const Camera* b)
@@ -74,7 +73,7 @@ Camera* Camera::createCamera(AbstractKart* kart, const int index)
  *  \param kart To which kart the camera is attached (NULL if a free camera).
  */
 Camera* Camera::createCamera(unsigned int index, CameraType type,
-                             AbstractKart* kart)
+                             AbstractKart* kart, bool left_camera)
 {
     Camera *camera = NULL;
     switch (type)
@@ -86,6 +85,7 @@ Camera* Camera::createCamera(unsigned int index, CameraType type,
     case CM_TYPE_END:    camera = new CameraEnd   (index, kart); break;
     }   // switch type
 
+    camera->m_left_camera = left_camera;
     return camera;
 }   // createCamera
 
@@ -100,7 +100,7 @@ void Camera::changeCamera(unsigned int camera_index, CameraType type)
     if(old_camera->getType()==type) return;
 
     Camera *new_camera = createCamera(old_camera->getIndex(), type,
-                                      old_camera->m_original_kart);
+                                      old_camera->m_original_kart, old_camera->m_left_camera);
     // Replace the previous camera
     m_all_cameras[camera_index] = new_camera;
     if(s_active_camera == old_camera)
@@ -271,6 +271,10 @@ void Camera::setInitialTransform()
     if (m_kart == NULL) return;
     Vec3 start_offset(0, 1.6f, -3);
     Vec3 current_position = m_kart->getSmoothedTrans()(start_offset);
+    if (m_left_camera)
+        current_position[0] -= 1;
+    else
+        current_position[0] += 1;
     assert(!std::isnan(current_position.getX()));
     assert(!std::isnan(current_position.getY()));
     assert(!std::isnan(current_position.getZ()));
