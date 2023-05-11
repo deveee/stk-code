@@ -276,11 +276,11 @@ void RaceGUI::calculateMinimapSize()
  */
 void RaceGUI::renderGlobal(float dt)
 {
+    cleanupMessages(dt);
     return;
     
 #ifndef SERVER_ONLY
     RaceGUIBase::renderGlobal(dt);
-    cleanupMessages(dt);
 
     // Special case : when 3 players play, use 4th window to display such
     // stuff (but we must clear it)
@@ -1259,7 +1259,7 @@ void RaceGUI::drawLap(const AbstractKart* kart,
         viewport.LowerRightCorner.X == (int)(irr_driver->getActualScreenSize().Width) &&
         !RaceManager::get()->getIfEmptyScreenSpaceExists()) 
     {
-        pos.UpperLeftCorner.Y = irr_driver->getActualScreenSize().Height*12/100;
+        //pos.UpperLeftCorner.Y = irr_driver->getActualScreenSize().Height*12/100;
     }
     pos.LowerRightCorner.Y  = viewport.LowerRightCorner.Y+20;
     pos.UpperLeftCorner.X   = viewport.LowerRightCorner.X

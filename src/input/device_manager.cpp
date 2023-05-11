@@ -91,9 +91,9 @@ bool DeviceManager::initialize()
         m_keyboards.push_back(new KeyboardDevice(m_keyboard_configs.get(n)));
     }
 
-    if ((UserConfigParams::m_multitouch_active == 1 && 
-        irr_driver->getDevice()->supportsTouchDevice()) ||
-        UserConfigParams::m_multitouch_active > 1)
+    //~ if ((UserConfigParams::m_multitouch_active == 1 && 
+        //~ irr_driver->getDevice()->supportsTouchDevice()) ||
+        //~ UserConfigParams::m_multitouch_active > 1)
     {
         m_multitouch_device = new MultitouchDevice();
     }

@@ -775,6 +775,7 @@ void InputManager::dispatchInput(Input::InputType type, int deviceID,
                     if (device != NULL)
                     {
                         KartSelectionScreen::getRunningInstance()->joinPlayer(device, NULL/*player profile*/);
+                        KartSelectionScreen::getRunningInstance()->joinPlayer(m_device_manager->getMultitouchDevice(), NULL/*player profile*/);
                     }
                 }
                 else if (value != 0 && (action == PA_MENU_CANCEL))

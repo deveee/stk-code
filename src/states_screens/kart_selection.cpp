@@ -1162,13 +1162,17 @@ void KartSelectionScreen::eventCallback(Widget* widget,
     }
     else if (name == "karts")
     {
-        if (m_kart_widgets.size() > unsigned(player_id))
-            playerConfirm(player_id);
+        for (unsigned int i = 0; i < m_kart_widgets.size(); i++)
+        {
+            playerConfirm(i);
+        }
     }
     else if (name == "continue")
     {
-        if (m_kart_widgets.size() > unsigned(player_id))
-            playerConfirm(player_id);
+        for (unsigned int i = 0; i < m_kart_widgets.size(); i++)
+        {
+            playerConfirm(i);
+        }
     }
     else if (name == "back")
     {
@@ -1622,6 +1626,7 @@ void KartSelectionScreen::setKartsFromCurrentGroup()
 // ----------------------------------------------------------------------------
 bool KartSelectionScreen::useContinueButton() const
 {
+    return true;
 #ifdef MOBILE_STK
     if (m_multiplayer)
         return false;

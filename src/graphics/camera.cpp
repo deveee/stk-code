@@ -271,10 +271,6 @@ void Camera::setInitialTransform()
     if (m_kart == NULL) return;
     Vec3 start_offset(0, 1.6f, -3);
     Vec3 current_position = m_kart->getSmoothedTrans()(start_offset);
-    if (m_left_camera)
-        current_position[0] -= 1;
-    else
-        current_position[0] += 1;
     assert(!std::isnan(current_position.getX()));
     assert(!std::isnan(current_position.getY()));
     assert(!std::isnan(current_position.getZ()));
