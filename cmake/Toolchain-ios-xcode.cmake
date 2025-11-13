@@ -7,7 +7,7 @@
 # You can also use -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM=xxxxxxxxxx to specify team
 
 # Increase every upload to App store
-SET(IOS_BUILD_VERSION 26)
+SET(IOS_BUILD_VERSION 159)
 
 # Get SDK path
 execute_process(COMMAND xcodebuild -version -sdk iphoneos Path

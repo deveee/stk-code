@@ -668,7 +668,7 @@ namespace UserConfigParams
             &m_video_group, "When playing a non-square amount of players (e.g. 2),"
             " should it split horizontally (top/bottom)"));
     PARAM_PREFIX BoolUserConfigParam        m_texture_compression
-        PARAM_DEFAULT(BoolUserConfigParam(true, "enable_texture_compression",
+        PARAM_DEFAULT(BoolUserConfigParam(false, "enable_texture_compression_ios",
         &m_video_group, "Enable Texture Compression"));
     /** This is a bit flag: bit 0: enabled (1) or disabled(0).
      *  Bit 1: setting done by default(0), or by user choice (2). This allows
@@ -717,11 +717,11 @@ namespace UserConfigParams
 
 #if defined(_IRR_COMPILE_WITH_DIRECT3D_9_) && defined(_M_ARM)
     PARAM_PREFIX StringUserConfigParam         m_render_driver
-        PARAM_DEFAULT(  StringUserConfigParam("directx9", "render_driver",
+        PARAM_DEFAULT(  StringUserConfigParam("directx9", "render_driver_ios",
         &m_video_group, "Render video driver to use, at the moment opengl, vulkan or directx9 is supported.") );
 #else
     PARAM_PREFIX StringUserConfigParam         m_render_driver
-        PARAM_DEFAULT(  StringUserConfigParam("opengl", "render_driver",
+        PARAM_DEFAULT(  StringUserConfigParam("vulkan", "render_driver_ios",
         &m_video_group, "Render video driver to use, at the moment opengl, vulkan or directx9 is supported.") );
 #endif
 

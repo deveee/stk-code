@@ -7,11 +7,11 @@
   <key>CFBundleExecutable</key>
   <string>supertuxkart</string>
   <key>CFBundleIdentifier</key>
-  <string>net.supertuxkart.stkios</string>
+  <string>net.supertuxkart.stk</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>SuperTuxKart </string>
+  <string>SuperTuxKart</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -42,5 +42,14 @@
   </array>
   <key>UIApplicationSupportsIndirectInputEvents</key>
   <true/>
+  <key>GCSupportsControllerUserInteraction</key>
+  <true/>
+  <key>GCSupportedGameControllers</key>
+  <array>
+    <dict>
+      <key>ProfileName</key>
+      <string>ExtendedGamepad</string>
+    </dict>
+  </array>
 </dict>
 </plist>

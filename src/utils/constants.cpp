@@ -31,3 +31,4 @@ const bool IS_LITTLE_ENDIAN = (endianness_test_ptr[0] == 0);
 
 // "SUPERTUXKART_VERSION" is defined from CMakeLists.txt from the project version
 const char STK_VERSION[] = SUPERTUXKART_VERSION;
+const char STK_VERSION_SHORT[] = SUPERTUXKART_VERSION_SHORT;

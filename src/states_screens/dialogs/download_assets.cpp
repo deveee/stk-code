@@ -60,7 +60,7 @@ public:
     {
         m_extraction_error = true;
         std::string download_url = stk_config->m_assets_download_url;
-        download_url += STK_VERSION;
+        download_url += STK_VERSION_SHORT;
         download_url += "/stk-assets.zip";
         setURL(download_url);
         setDownloadAssetsRequest(true);
